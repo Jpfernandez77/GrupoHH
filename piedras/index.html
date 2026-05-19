@@ -543,6 +543,9 @@
         <select id="f-vendedora" onchange="renderInventario()">
           <option value="">Todas las vendedoras</option>
         </select>
+        <button id="btn-entregados" class="btn btn-outline btn-sm" onclick="toggleEntregados()" style="white-space:nowrap">
+          👁 Ver entregados <span id="cnt-entregados"></span>
+        </button>
       </div>
 
       <div id="inv-list" class="piedra-list"></div>
@@ -821,7 +824,8 @@ function renderDashboard() {
 }
 
 // ── INVENTARIO ────────────────────────────────────────────────────────────────
-let _filtroEstados = new Set();
+let _filtroEstados    = new Set();
+let _mostrarEntregados = false;
 
 function toggleEstado(k) {
   if (_filtroEstados.has(k)) _filtroEstados.delete(k);
@@ -830,6 +834,10 @@ function toggleEstado(k) {
 }
 function limpiarEstados() {
   _filtroEstados.clear();
+  renderInventario();
+}
+function toggleEntregados() {
+  _mostrarEntregados = !_mostrarEntregados;
   renderInventario();
 }
 
@@ -859,8 +867,20 @@ function renderInventario() {
     if (cs) cs.classList.toggle('show', n>0);
   }
 
+  // Actualizar botón de entregados
+  const totalEntregados = all.filter(p => p.estado === 'entregado').length;
+  const cntEl = document.getElementById('cnt-entregados');
+  const btnEnt = document.getElementById('btn-entregados');
+  if (cntEl) cntEl.textContent = totalEntregados > 0 ? `(${totalEntregados})` : '';
+  if (btnEnt) {
+    btnEnt.style.borderColor = _mostrarEntregados ? 'var(--gray)' : '';
+    btnEnt.style.color       = _mostrarEntregados ? 'var(--text)' : '';
+    btnEnt.textContent       = (_mostrarEntregados ? '🙈 Ocultar entregados' : '👁 Ver entregados') + (totalEntregados > 0 ? ` (${totalEntregados})` : '');
+  }
+
   let ps = [...all].reverse();
   if (_filtroEstados.size) ps = ps.filter(p => _filtroEstados.has(p.estado));
+  else if (!buscar && !_mostrarEntregados) ps = ps.filter(p => p.estado !== 'entregado');
   if (tipo==='melee')      ps = ps.filter(p => p.tipo==='melee');
   if (tipo==='individual') ps = ps.filter(p => p.tipo!=='melee');
   if (canal)     ps = ps.filter(p => p.canal===canal);
