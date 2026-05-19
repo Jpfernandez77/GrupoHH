@@ -515,12 +515,29 @@
       </div>
 
       <div class="card">
-        <h3>Oro Reciclado</h3>
-        <div class="field" style="margin-bottom:16px">
-          <label>Sobrante de tanda anterior <span style="color:var(--muted);font-weight:400">(opcional — autocompleta gramos y kilataje)</span></label>
+        <!-- ── Sobrante 24k ── -->
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px">
+          <h3 style="margin:0">Sobrante 24k</h3>
+          <span style="font-size:11px;color:var(--muted);font-weight:400">oro puro sin usar de tanda anterior</span>
+        </div>
+        <div class="field" style="margin-bottom:12px">
+          <label>Tanda de origen <span style="color:var(--muted);font-weight:400">(opcional — se autocompletan los gramos)</span></label>
           <select id="n-origen-reciclado" onchange="usarSobranteDeTanda()">
             <option value="">— Sin origen específico —</option>
           </select>
+        </div>
+        <div class="field">
+          <label>Gramos de sobrante 24k</label>
+          <input type="number" id="n-sobrante-anterior" placeholder="0.00" min="0" step="0.0001" value="0"
+            oninput="actualizarPreviewNueva()" style="max-width:200px" />
+        </div>
+
+        <hr style="border:none;border-top:1px solid var(--border);margin:20px 0">
+
+        <!-- ── Reciclado de piezas/bebederos ── -->
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px">
+          <h3 style="margin:0">Oro Reciclado</h3>
+          <span style="font-size:11px;color:var(--muted);font-weight:400">piezas malas + bebederos + soportes (kilataje exacto)</span>
         </div>
         <div class="grid-2">
           <div class="field">
@@ -891,9 +908,14 @@ function getData() {
   return d;
 }
 
-// Oro puro (24k equiv) total de una tanda: pedido ya es 24k, reciclado se convierte
+// Oro puro (24k equiv) total de una tanda:
+//  - pedido: ya es 24k
+//  - sobrante_anterior_g: también ya es 24k (oro puro sin usar)
+//  - reciclado: piezas/bebederos, se convierte según kilataje
 function finoTanda(t) {
-  return (t.oro_pedido_g || 0) + (t.oro_reciclado_g || 0) * ((t.kilate_reciclado || 0) / 24);
+  return (t.oro_pedido_g       || 0)
+       + (t.sobrante_anterior_g || 0)
+       + (t.oro_reciclado_g    || 0) * ((t.kilate_reciclado || 0) / 24);
 }
 
 // Días entre registro y completación
@@ -1058,7 +1080,7 @@ function renderDashboard() {
   const sobrantes = tandasConSobrante.map(t => {
     const usado = d.tandas
       .filter(x => x.origen_reciclado === t.codigo)
-      .reduce((s, x) => s + (x.oro_reciclado_g || 0), 0);
+      .reduce((s, x) => s + (x.sobrante_anterior_g || 0), 0);
     return { tanda: t, disponible: Math.max(0, t.completacion.sobro_g - usado) };
   }).filter(s => s.disponible > 0.001);
 
@@ -1505,28 +1527,31 @@ function toggleKilateRecic() {
 }
 
 function actualizarPreviewNueva() {
-  const pedido      = parseFloat(document.getElementById('n-pedido').value) || 0;
-  const costo       = parseFloat(document.getElementById('n-costo').value) || 0;
-  const recic       = parseFloat(document.getElementById('n-reciclado').value) || 0;
-  const kilateRecic = parseFloat(document.getElementById('n-kilate-recic').value) || 0;
-  const box         = document.getElementById('nueva-preview');
+  const pedido       = parseFloat(document.getElementById('n-pedido').value)           || 0;
+  const costo        = parseFloat(document.getElementById('n-costo').value)            || 0;
+  const sobrante24k  = parseFloat(document.getElementById('n-sobrante-anterior').value) || 0;
+  const recic        = parseFloat(document.getElementById('n-reciclado').value)        || 0;
+  const kilateRecic  = parseFloat(document.getElementById('n-kilate-recic').value)     || 0;
+  const box          = document.getElementById('nueva-preview');
 
   if (!pedido || !costo) { box.style.display = 'none'; return; }
 
   const cg24k     = costo / pedido;
   const finoRecic = recic * (kilateRecic / 24);
-  const totalFino = pedido + finoRecic;
+  const totalFino = pedido + sobrante24k + finoRecic;
 
-  let reciclRow = '';
-  if (recic > 0 && kilateRecic > 0) {
-    reciclRow = `
-      <div class="result-row"><span class="label">Oro reciclado (${kilateRecic}k) → 24k equiv.</span><span class="value">${fmtNum(finoRecic)} g</span></div>`;
-  }
+  const sobrante24kRow = sobrante24k > 0
+    ? `<div class="result-row"><span class="label">+ Sobrante 24k de tanda anterior</span><span class="value">${fmtNum(sobrante24k)} g</span></div>`
+    : '';
+  const reciclRow = recic > 0 && kilateRecic > 0
+    ? `<div class="result-row"><span class="label">+ Oro reciclado (${kilateRecic}k) → 24k equiv.</span><span class="value">${fmtNum(finoRecic)} g</span></div>`
+    : '';
 
   box.style.display = 'block';
   box.innerHTML = `
     <h3>Vista Previa</h3>
     <div class="result-row"><span class="label">Costo por gramo de oro 24k</span><span class="value gold">${fmtMoney(cg24k)}/g</span></div>
+    ${sobrante24kRow}
     ${reciclRow}
     <div class="result-row"><span class="label">Total oro puro disponible (24k equiv.)</span><span class="value gold">${fmtNum(totalFino)} g</span></div>
   `;
@@ -1578,23 +1603,25 @@ async function registrarTanda() {
 
   try {
     const d = getData();
-    const impVinc      = document.getElementById('n-impresion')?.value || null;
-    const origenRecic  = document.getElementById('n-origen-reciclado')?.value || null;
+    const impVinc       = document.getElementById('n-impresion')?.value || null;
+    const origenSobrant = document.getElementById('n-origen-reciclado')?.value || null;
+    const sobrante24k   = parseFloat(document.getElementById('n-sobrante-anterior')?.value) || 0;
     const tanda = {
-      codigo:              `ORO_${String(d.tandas.length + 1).padStart(8,'0')}`,
+      codigo:               `ORO_${String(d.tandas.length + 1).padStart(8,'0')}`,
       fecha,
-      oro_pedido_g:        pedido,
-      kilate_pedido:       '24',
-      costo_total:         costo,
-      oro_fino_comprado_g: +pedido.toFixed(4),
-      costo_g_24k:         +(costo / pedido).toFixed(4),
-      oro_reciclado_g:     recic,
-      kilate_reciclado:    kilateRecic,
-      estado:              'pendiente',
-      completada:          false,
-      completacion:        null,
-      impresion_vinculada: impVinc || null,
-      origen_reciclado:    origenRecic || null,
+      oro_pedido_g:         pedido,
+      kilate_pedido:        '24',
+      costo_total:          costo,
+      oro_fino_comprado_g:  +pedido.toFixed(4),
+      costo_g_24k:          +(costo / pedido).toFixed(4),
+      sobrante_anterior_g:  sobrante24k,
+      origen_reciclado:     origenSobrant || null,
+      oro_reciclado_g:      recic,
+      kilate_reciclado:     kilateRecic,
+      estado:               'pendiente',
+      completada:           false,
+      completacion:         null,
+      impresion_vinculada:  impVinc || null,
     };
     d.tandas.push(tanda);
     await syncGuardar(tanda);
@@ -1624,6 +1651,8 @@ function limpiarNueva() {
   if (impEl) impEl.value = '';
   const origenEl = document.getElementById('n-origen-reciclado');
   if (origenEl) origenEl.value = '';
+  const sobrEl = document.getElementById('n-sobrante-anterior');
+  if (sobrEl) sobrEl.value = '0';
 }
 
 // ── COMPLETAR TANDA ───────────────────────────────────────────────────────────
@@ -1649,14 +1678,16 @@ function cargarTandaParaCompletar() {
   if (!t) return;
 
   const fino = finoTanda(t);
-  const reciclLabel = t.oro_reciclado_g > 0
+  const sobrante24kIn = t.sobrante_anterior_g || 0;
+  const reciclLabel   = t.oro_reciclado_g > 0
     ? `${fmtNum(t.oro_reciclado_g)} g (${t.kilate_reciclado}k) → ${fmtNum(t.oro_reciclado_g * (t.kilate_reciclado/24))} g puro`
     : '—';
   infoEl.style.display = 'block';
   infoEl.innerHTML = `
     <div class="result-row"><span class="label">Fecha registro</span><span class="value">${t.fecha}</span></div>
-    <div class="result-row"><span class="label">Oro pedido</span><span class="value">${fmtNum(t.oro_pedido_g)} g (24k)</span></div>
-    <div class="result-row"><span class="label">Oro reciclado</span><span class="value">${reciclLabel}</span></div>
+    <div class="result-row"><span class="label">Oro comprado (24k)</span><span class="value">${fmtNum(t.oro_pedido_g)} g</span></div>
+    ${sobrante24kIn > 0 ? `<div class="result-row"><span class="label">+ Sobrante 24k anterior</span><span class="value">${fmtNum(sobrante24kIn, 4)} g (oro puro)</span></div>` : ''}
+    <div class="result-row"><span class="label">+ Oro reciclado (piezas/bebederos)</span><span class="value">${reciclLabel}</span></div>
     <div class="result-row"><span class="label">Total oro puro disponible</span><span class="value gold">${fmtNum(fino)} g (24k equiv.)</span></div>
     <div class="result-row"><span class="label">Costo / g de oro 24k</span><span class="value gold">${fmtMoney(t.costo_g_24k)}</span></div>
   `;
@@ -1731,11 +1762,11 @@ function calcularPreview() {
       </tbody>
     </table>
     <div class="result-row" style="margin-top:12px">
-      <span class="label">Oro disponible</span>
+      <span class="label">Oro puro disponible</span>
       <span class="value">${fmtNum(totalDisp)} g</span>
     </div>
     <div class="result-row">
-      <span class="label">Oro que sobró</span>
+      <span class="label">Sobrante 24k sin usar</span>
       <span class="value ${sobroColor}">${fmtNum(sobro, 4)} g</span>
     </div>
     <div class="result-row">
@@ -1815,10 +1846,11 @@ function openDetalle(codigo) {
   document.getElementById('modal-title').textContent = `Tanda ${t.codigo}`;
 
   const d2 = getData();
-  const reciclStr = t.oro_reciclado_g > 0
+  const sobrante24kIn = t.sobrante_anterior_g || 0;
+  const reciclStr     = t.oro_reciclado_g > 0
     ? `${fmtNum(t.oro_reciclado_g)} g (${t.kilate_reciclado}k) → ${fmtNum(t.oro_reciclado_g*(t.kilate_reciclado/24))} g puro`
-    : '—';
-  const origenTanda = t.origen_reciclado
+    : null;
+  const origenTanda   = t.origen_reciclado
     ? d2.tandas.find(x => x.codigo === t.origen_reciclado) : null;
 
   let html = `
@@ -1827,13 +1859,21 @@ function openDetalle(codigo) {
     <div class="result-row"><span class="label">Oro pedido</span><span class="value">${fmtNum(t.oro_pedido_g)} g (24k)</span></div>
     <div class="result-row"><span class="label">Costo total</span><span class="value">${fmtMoney(t.costo_total)}</span></div>
     <div class="result-row"><span class="label">Costo / g de oro 24k</span><span class="value gold">${fmtMoney(t.costo_g_24k)}</span></div>
-    <div class="result-row"><span class="label">Oro reciclado</span><span class="value">${reciclStr}</span></div>
+    ${sobrante24kIn > 0 ? `<div class="result-row">
+      <span class="label">+ Sobrante 24k anterior</span>
+      <span class="value gold">${fmtNum(sobrante24kIn, 4)} g (oro puro)</span>
+    </div>
     ${origenTanda ? `<div class="result-row">
-      <span class="label" style="padding-left:12px;color:var(--muted)">↳ Sobrante de</span>
-      <span class="value"><span style="font-family:monospace;color:#6ab4f0">${origenTanda.codigo}</span>
-        <span style="color:var(--muted);font-size:12px"> — ${origenTanda.fecha} · sobró ${fmtNum(origenTanda.completacion?.sobro_g ?? 0, 4)} g @ ${fmtNum(origenTanda.completacion?.kilate_sobro ?? 0, 2)}k</span>
+      <span class="label" style="padding-left:12px;color:var(--muted)">↳ De</span>
+      <span class="value">
+        <span style="font-family:monospace;color:#6ab4f0">${origenTanda.codigo}</span>
+        <span style="color:var(--muted);font-size:12px"> — ${origenTanda.fecha} · tenía ${fmtNum(origenTanda.completacion?.sobro_g ?? 0, 4)} g de sobrante</span>
       </span>
-    </div>` : ''}
+    </div>` : ''}` : ''}
+    ${reciclStr ? `<div class="result-row">
+      <span class="label">+ Oro reciclado (piezas/bebederos)</span>
+      <span class="value">${reciclStr}</span>
+    </div>` : (!sobrante24kIn ? `<div class="result-row"><span class="label">Oro adicional</span><span class="value" style="color:var(--muted)">—</span></div>` : '')}
     <div class="result-row"><span class="label">Total oro puro disponible</span><span class="value gold">${fmtNum(fino)} g (24k equiv.)</span></div>
     <div class="result-row"><span class="label">Estado</span><span>${renderBadge(t)}</span></div>
     ${diasTanda(t) !== null ? `<div class="result-row"><span class="label">Tiempo de entrega</span><span class="value gold">${diasTanda(t)} días</span></div>` : ''}
@@ -1962,15 +2002,15 @@ function openDetalle(codigo) {
     // Sobrante tracking: show where this tanda's leftover gold went
     if (c.sobro_g > 0.001) {
       const usos = d2.tandas.filter(x => x.origen_reciclado === t.codigo);
-      const totalUsado = usos.reduce((s, x) => s + (x.oro_reciclado_g || 0), 0);
+      const totalUsado = usos.reduce((s, x) => s + (x.sobrante_anterior_g || 0), 0);
       const disponible = Math.max(0, c.sobro_g - totalUsado);
       const dispColor  = disponible > 0.001 ? 'var(--gold)' : 'var(--green)';
       html += `
         <hr class="sep">
-        <h3>Destino del Sobrante</h3>
+        <h3>Sobrante 24k</h3>
         <div class="result-row">
-          <span class="label">Sobrante calculado</span>
-          <span class="value gold">${fmtNum(c.sobro_g, 4)} g @ ${fmtNum(c.kilate_sobro, 2)}k</span>
+          <span class="label">Oro 24k sin usar en este vaciado</span>
+          <span class="value gold">${fmtNum(c.sobro_g, 4)} g (oro puro)</span>
         </div>`;
       if (usos.length > 0) {
         usos.forEach(u => {
@@ -2450,32 +2490,35 @@ function refreshSobranteSelect() {
   tandasConSobrante.reverse().forEach(t => {
     const usado = d.tandas
       .filter(x => x.origen_reciclado === t.codigo)
-      .reduce((s, x) => s + (x.oro_reciclado_g || 0), 0);
+      .reduce((s, x) => s + (x.sobrante_anterior_g || 0), 0);
     const disponible = Math.max(0, t.completacion.sobro_g - usado);
     const agotado    = disponible < 0.001;
-    const kilStr     = t.completacion.kilate_sobro > 0 ? ` @ ${fmtNum(t.completacion.kilate_sobro, 2)}k` : '';
     const label      = agotado
       ? `${t.codigo}  (${t.fecha}  ·  Agotado)`
-      : `${t.codigo}  (${t.fecha}  ·  ${fmtNum(disponible, 2)} g disponibles${kilStr})`;
+      : `${t.codigo}  (${t.fecha}  ·  ${fmtNum(disponible, 4)} g 24k disponibles)`;
     sel.innerHTML += `<option value="${t.codigo}"${t.codigo === cur ? ' selected' : ''}${agotado ? ' disabled' : ''}>${label}</option>`;
   });
 }
 
 function usarSobranteDeTanda() {
   const codigo = document.getElementById('n-origen-reciclado').value;
-  if (!codigo) return;
+  const sobrEl = document.getElementById('n-sobrante-anterior');
+  if (!codigo) {
+    if (sobrEl) sobrEl.value = '0';
+    actualizarPreviewNueva();
+    return;
+  }
   const d = getData();
   const t = d.tandas.find(x => x.codigo === codigo);
   if (!t?.completacion) return;
 
+  // Track usage via sobrante_anterior_g (pure 24k field)
   const usado = d.tandas
     .filter(x => x.origen_reciclado === codigo)
-    .reduce((s, x) => s + (x.oro_reciclado_g || 0), 0);
+    .reduce((s, x) => s + (x.sobrante_anterior_g || 0), 0);
   const disponible = Math.max(0, t.completacion.sobro_g - usado);
 
-  document.getElementById('n-reciclado').value       = disponible.toFixed(4);
-  document.getElementById('n-kilate-recic').value    = t.completacion.kilate_sobro > 0 ? t.completacion.kilate_sobro : '';
-  toggleKilateRecic();
+  if (sobrEl) sobrEl.value = disponible.toFixed(4);
   actualizarPreviewNueva();
 }
 
