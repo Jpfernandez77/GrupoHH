@@ -355,6 +355,14 @@
   .calc-preview .cp-lbl  { font-size:11px; color:var(--muted); }
   .pct-bar-wrap { background:rgba(255,255,255,.06); border-radius:4px; height:6px; overflow:hidden; margin-top:4px; width:80px; }
   .pct-bar-fill { height:100%; border-radius:4px; transition:width .3s; }
+
+  /* ── imp extras ── */
+  .imp-codigo { font-family:monospace; font-size:12px; font-weight:700; color:var(--gold); background:rgba(201,168,76,.1); border:1px solid rgba(201,168,76,.2); border-radius:4px; padding:2px 8px; flex-shrink:0; }
+  .imp-tanda-badge { font-family:monospace; font-size:11px; font-weight:700; color:#6ab4f0; background:rgba(100,180,240,.1); border:1px solid rgba(100,180,240,.2); border-radius:4px; padding:2px 8px; flex-shrink:0; }
+  .imp-combined-preview { background:rgba(106,175,130,.06); border:1px solid rgba(106,175,130,.2); border-radius:8px; padding:14px 18px; margin-top:12px; }
+  .imp-combined-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; }
+  @media(max-width:600px) { .imp-combined-grid { grid-template-columns:1fr 1fr; } }
+  .section-label { font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:.8px; font-weight:600; margin-bottom:12px; margin-top:4px; }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
 </head>
@@ -601,30 +609,51 @@
 
       <!-- Formulario nueva impresión -->
       <div class="card">
-        <h3>Registrar Impresión</h3>
-        <div class="grid-2">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+          <h3 style="margin:0">Registrar Impresión</h3>
+          <span id="imp-codigo-preview" style="display:none" class="imp-codigo">IMP-0001</span>
+        </div>
+
+        <!-- Info básica -->
+        <div class="section-label">Información General</div>
+        <div class="grid-3">
           <div class="field">
             <label>Fecha</label>
             <input type="date" id="imp-fecha" />
           </div>
-          <div class="field">
+          <div class="field" style="grid-column:span 2">
             <label>Nombre / Descripción</label>
             <input type="text" id="imp-nombre" placeholder="Ej: Anillos Colección Primavera" />
           </div>
         </div>
-        <div class="grid-2" style="margin-top:16px">
+        <div class="grid-2" style="margin-top:14px">
+          <div class="field">
+            <label>Material</label>
+            <select id="imp-material">
+              <option value="resina">Resina estándar</option>
+              <option value="resina_flexible">Resina flexible</option>
+              <option value="cera">Cera / Wax</option>
+              <option value="otro">Otro</option>
+            </select>
+          </div>
+        </div>
+
+        <hr style="border:none;border-top:1px solid var(--border);margin:20px 0">
+        <!-- Producción -->
+        <div class="section-label">Producción y Costos</div>
+        <div class="grid-2">
           <div class="field">
             <label>Total de piezas impresas</label>
             <input type="number" id="imp-total" placeholder="0" min="1" step="1" oninput="calcImpPreview()" />
           </div>
           <div class="field">
-            <label>Costo total ($)</label>
+            <label>Costo total de impresión ($)</label>
             <input type="number" id="imp-costo" placeholder="0.00" min="0" step="0.01" oninput="calcImpPreview()" />
           </div>
         </div>
 
         <!-- Preview costo/pieza -->
-        <div class="calc-preview" id="imp-preview" style="display:none">
+        <div class="calc-preview" id="imp-preview" style="display:none;margin-top:12px">
           <div class="cp-item">
             <span class="cp-val" id="prev-cpp">—</span>
             <span class="cp-lbl">Costo por pieza</span>
@@ -632,7 +661,8 @@
         </div>
 
         <hr style="border:none;border-top:1px solid var(--border);margin:20px 0">
-        <h3>Resultado de la Impresión</h3>
+        <!-- Resultado -->
+        <div class="section-label">Resultado de la Impresión</div>
         <div class="grid-2">
           <div class="field">
             <label>✅ Piezas buenas</label>
@@ -645,7 +675,7 @@
         </div>
 
         <!-- Preview resultado -->
-        <div class="calc-preview" id="imp-resultado-preview" style="display:none">
+        <div class="calc-preview" id="imp-resultado-preview" style="display:none;margin-top:12px">
           <div class="cp-item">
             <span class="cp-val" id="prev-exito" style="color:var(--green)">—</span>
             <span class="cp-lbl">Tasa de éxito</span>
@@ -657,8 +687,28 @@
           </div>
           <div class="cp-item">
             <span class="cp-val" id="prev-perdida" style="color:var(--red)">—</span>
-            <span class="cp-lbl">Costo de piezas perdidas</span>
+            <span class="cp-lbl">Costo perdido en defectos</span>
           </div>
+        </div>
+
+        <hr style="border:none;border-top:1px solid var(--border);margin:20px 0">
+        <!-- Vincular vaciado -->
+        <div class="section-label">🔗 Vincular Vaciado &nbsp;<span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--muted)">(opcional)</span></div>
+        <div class="grid-2">
+          <div class="field">
+            <label>Tanda de vaciado (oro)</label>
+            <select id="imp-tanda" onchange="calcImpTandaPreview()">
+              <option value="">— Sin vincular —</option>
+            </select>
+          </div>
+        </div>
+        <!-- Preview tanda vinculada + costo combinado -->
+        <div id="imp-tanda-preview" style="display:none"></div>
+
+        <hr style="border:none;border-top:1px solid var(--border);margin:20px 0">
+        <div class="field">
+          <label>Notas</label>
+          <input type="text" id="imp-notas" placeholder="Observaciones opcionales…" />
         </div>
 
         <div id="imp-error" style="display:none;color:var(--red);font-size:13px;margin-top:12px"></div>
@@ -831,8 +881,9 @@ const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJ
 let _data = null;
 
 function getData() {
-  const d = _data || { tandas: [], ultimo: 0, impresiones: [] };
+  const d = _data || { tandas: [], ultimo: 0, impresiones: [], ultimo_imp: 0 };
   if (!d.impresiones) d.impresiones = [];
+  if (typeof d.ultimo_imp !== 'number') d.ultimo_imp = 0;
   return d;
 }
 
@@ -2048,18 +2099,22 @@ function calcImpResultado() {
   } else {
     prev.style.display = 'none';
   }
+  calcImpTandaPreview();
 }
 
 function guardarImpresion() {
   const errEl  = document.getElementById('imp-error');
   errEl.style.display = 'none';
 
-  const fecha  = document.getElementById('imp-fecha').value;
-  const nombre = document.getElementById('imp-nombre').value.trim();
-  const total  = parseInt(document.getElementById('imp-total').value);
-  const costo  = parseFloat(document.getElementById('imp-costo').value);
-  const buenas = parseInt(document.getElementById('imp-buenas').value);
-  const rotas  = parseInt(document.getElementById('imp-rotas').value);
+  const fecha       = document.getElementById('imp-fecha').value;
+  const nombre      = document.getElementById('imp-nombre').value.trim();
+  const total       = parseInt(document.getElementById('imp-total').value);
+  const costo       = parseFloat(document.getElementById('imp-costo').value);
+  const buenas      = parseInt(document.getElementById('imp-buenas').value);
+  const rotas       = parseInt(document.getElementById('imp-rotas').value);
+  const material    = document.getElementById('imp-material')?.value || 'resina';
+  const tandaCod    = document.getElementById('imp-tanda')?.value || '';
+  const notas       = document.getElementById('imp-notas')?.value.trim() || '';
 
   if (!fecha)               { errEl.textContent = 'Agrega la fecha.'; errEl.style.display='block'; return; }
   if (!nombre)              { errEl.textContent = 'Agrega un nombre o descripción.'; errEl.style.display='block'; return; }
@@ -2074,35 +2129,66 @@ function guardarImpresion() {
     errEl.style.display = 'block'; return;
   }
 
+  const d = getData();
+
+  // Generar código secuencial
+  d.ultimo_imp = (d.ultimo_imp || 0) + 1;
+  const codigo = 'IMP-' + String(d.ultimo_imp).padStart(4, '0');
+
+  // Calcular costos vinculados al vaciado
+  let tanda_piezas = null, costo_vaciado_por_pieza = null, costo_combinado_por_pieza = null;
+  if (tandaCod) {
+    const t = d.tandas.find(x => x.codigo === tandaCod);
+    if (t && t.completada && t.completacion) {
+      tanda_piezas = ['10','14','18'].reduce((s, k) => s + (t.completacion.produccion[k].piezas || 0), 0);
+      costo_vaciado_por_pieza = tanda_piezas > 0 ? t.costo_total / tanda_piezas : null;
+    }
+  }
+  const cpp_buena = buen > 0 ? costo / buen : null;
+  if (cpp_buena !== null && costo_vaciado_por_pieza !== null) {
+    costo_combinado_por_pieza = +(cpp_buena + costo_vaciado_por_pieza).toFixed(4);
+  }
+
   const imp = {
     id:     'IMP-' + fecha.replace(/-/g,'') + '-' + Date.now(),
-    fecha, nombre,
-    total_piezas: total,
-    costo_total:  costo,
-    costo_por_pieza: costo / total,
-    buenas: buen,
-    rotas:  rot,
-    costo_por_pieza_buena: buen > 0 ? costo / buen : null,
-    tasa_exito: buen !== null ? buen / total : null,
-    notas: '',
+    codigo,
+    fecha, nombre, material,
+    total_piezas:          total,
+    costo_total:           costo,
+    costo_por_pieza:       +(costo / total).toFixed(4),
+    buenas:                buen,
+    rotas:                 rot,
+    costo_por_pieza_buena: cpp_buena !== null ? +cpp_buena.toFixed(4) : null,
+    tasa_exito:            buen !== null ? +(buen / total).toFixed(4) : null,
+    tanda_vinculada:       tandaCod || null,
+    tanda_piezas,
+    costo_vaciado_por_pieza,
+    costo_combinado_por_pieza,
+    notas,
   };
 
-  const d = getData();
   d.impresiones.push(imp);
   saveLocal();
 
-  toast(`Impresión "${nombre}" guardada ✓`);
+  toast(`${codigo} — "${nombre}" guardada ✓`);
   limpiarImpresion();
   renderImpresiones();
 }
 
 function limpiarImpresion() {
-  ['imp-fecha','imp-nombre','imp-total','imp-costo','imp-buenas','imp-rotas']
+  ['imp-fecha','imp-nombre','imp-total','imp-costo','imp-buenas','imp-rotas','imp-notas']
     .forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+  const matEl = document.getElementById('imp-material');
+  if (matEl) matEl.value = 'resina';
+  const tandaEl = document.getElementById('imp-tanda');
+  if (tandaEl) tandaEl.value = '';
   document.getElementById('imp-fecha').value = today();
   document.getElementById('imp-preview').style.display = 'none';
   document.getElementById('imp-resultado-preview').style.display = 'none';
   document.getElementById('imp-error').style.display = 'none';
+  const tandaPrev = document.getElementById('imp-tanda-preview');
+  if (tandaPrev) tandaPrev.style.display = 'none';
+  updateImpCodigoPreview();
 }
 
 function eliminarImpresion(id) {
@@ -2115,6 +2201,9 @@ function eliminarImpresion(id) {
 }
 
 function renderImpresiones() {
+  refreshImpTandaSelect();
+  updateImpCodigoPreview();
+
   const d    = getData();
   const imps = [...(d.impresiones || [])].reverse();
 
@@ -2123,21 +2212,38 @@ function renderImpresiones() {
   const totPzas = imps.reduce((s, i) => s + (i.total_piezas || 0), 0);
   const totBuen = imps.filter(i => i.buenas != null).reduce((s, i) => s + i.buenas, 0);
   const totRot  = imps.filter(i => i.rotas  != null).reduce((s, i) => s + i.rotas,  0);
-  const avgExito = imps.filter(i => i.tasa_exito != null).length
-    ? (imps.filter(i => i.tasa_exito != null).reduce((s,i) => s + i.tasa_exito, 0) /
-       imps.filter(i => i.tasa_exito != null).length * 100).toFixed(1)
-    : '—';
-  const avgCpp = imps.filter(i => i.costo_por_pieza_buena != null).length
-    ? imps.filter(i => i.costo_por_pieza_buena != null)
-          .reduce((s,i) => s + i.costo_por_pieza_buena, 0) /
-       imps.filter(i => i.costo_por_pieza_buena != null).length
-    : null;
+  const conExito = imps.filter(i => i.tasa_exito != null);
+  const avgExito = conExito.length
+    ? (conExito.reduce((s,i) => s + i.tasa_exito, 0) / conExito.length * 100).toFixed(1) : '—';
+  const conCpp = imps.filter(i => i.costo_por_pieza_buena != null);
+  const avgCpp = conCpp.length
+    ? conCpp.reduce((s,i) => s + i.costo_por_pieza_buena, 0) / conCpp.length : null;
+  const conComb = imps.filter(i => i.costo_combinado_por_pieza != null);
+  const avgComb = conComb.length
+    ? conComb.reduce((s,i) => s + i.costo_combinado_por_pieza, 0) / conComb.length : null;
+
+  const exitoColor = avgExito === '—' ? 'var(--muted)' : parseFloat(avgExito) >= 90 ? 'var(--green)' : parseFloat(avgExito) >= 70 ? 'var(--gold)' : 'var(--red)';
 
   document.getElementById('imp-stats').innerHTML = `
-    <div class="stat-card"><div class="s-label">Lotes registrados</div><div class="s-value">${total}</div></div>
-    <div class="stat-card"><div class="s-label">Total piezas</div><div class="s-value">${totPzas}</div><div class="s-sub">${totBuen} buenas · ${totRot} rotas</div></div>
-    <div class="stat-card"><div class="s-label">Tasa de éxito prom.</div><div class="s-value" style="color:${parseFloat(avgExito)>=90?'var(--green)':parseFloat(avgExito)>=70?'var(--gold)':'var(--red)'}">${avgExito}${avgExito!=='—'?'%':''}</div></div>
-    <div class="stat-card"><div class="s-label">Costo prom. / pieza buena</div><div class="s-value" style="font-size:18px">${avgCpp ? fmtMoney(avgCpp) : '—'}</div></div>
+    <div class="stat-card">
+      <div class="s-label">Lotes registrados</div>
+      <div class="s-value">${total}</div>
+      <div class="s-sub">${totPzas} piezas en total</div>
+    </div>
+    <div class="stat-card">
+      <div class="s-label">Resultado acumulado</div>
+      <div class="s-value" style="font-size:18px">${totBuen} ✅</div>
+      <div class="s-sub">${totRot} ❌ rotas/defectos</div>
+    </div>
+    <div class="stat-card">
+      <div class="s-label">Tasa de éxito prom.</div>
+      <div class="s-value" style="color:${exitoColor}">${avgExito}${avgExito !== '—' ? '%' : ''}</div>
+    </div>
+    <div class="stat-card">
+      <div class="s-label">Costo prom. / pieza buena</div>
+      <div class="s-value" style="font-size:18px">${avgCpp ? fmtMoney(avgCpp) : '—'}</div>
+      <div class="s-sub">${avgComb ? 'Combinado: ' + fmtMoney(avgComb) : 'Sin vínculos de vaciado'}</div>
+    </div>
   `;
 
   // Lista
@@ -2147,16 +2253,26 @@ function renderImpresiones() {
     return;
   }
 
+  const matLabels = { resina:'Resina', resina_flexible:'Resina flex.', cera:'Cera/Wax', otro:'Otro' };
+
   el.innerHTML = imps.map(imp => {
     const pct   = imp.tasa_exito != null ? (imp.tasa_exito * 100).toFixed(1) : null;
     const color = pct != null ? (pct >= 90 ? 'var(--green)' : pct >= 70 ? 'var(--gold)' : 'var(--red)') : 'var(--muted)';
     const cppR  = imp.costo_por_pieza_buena != null ? fmtMoney(imp.costo_por_pieza_buena) : fmtMoney(imp.costo_por_pieza);
+    const matLabel = imp.material ? (matLabels[imp.material] || imp.material) : null;
 
     return `<div class="imp-item">
       <div class="meta">
-        <span class="imp-name">${imp.nombre}</span>
-        <span class="imp-sub">${imp.fecha} · ${imp.total_piezas} piezas · Costo ${fmtMoney(imp.costo_total)}</span>
-        ${imp.buenas != null ? `<span class="imp-sub">✅ ${imp.buenas} buenas · ❌ ${imp.rotas ?? 0} rotas</span>` : '<span class="imp-sub" style="color:var(--muted);font-style:italic">Resultado pendiente</span>'}
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px">
+          ${imp.codigo ? `<span class="imp-codigo">${imp.codigo}</span>` : ''}
+          <span class="imp-name">${imp.nombre}</span>
+          ${imp.tanda_vinculada ? `<span class="imp-tanda-badge">🔗 ${imp.tanda_vinculada}</span>` : ''}
+        </div>
+        <span class="imp-sub">${imp.fecha}${matLabel ? ' · ' + matLabel : ''} · ${imp.total_piezas} piezas · ${fmtMoney(imp.costo_total)}</span>
+        ${imp.buenas != null
+          ? `<span class="imp-sub">✅ ${imp.buenas} buenas · ❌ ${imp.rotas ?? 0} rotas</span>`
+          : '<span class="imp-sub" style="color:var(--muted);font-style:italic">Resultado pendiente</span>'}
+        ${imp.notas ? `<span class="imp-sub" style="color:var(--muted);font-style:italic">${imp.notas}</span>` : ''}
       </div>
       <div class="imp-right">
         ${pct != null ? `<div class="imp-kpi">
@@ -2166,12 +2282,118 @@ function renderImpresiones() {
         </div>` : ''}
         <div class="imp-kpi">
           <div class="kv" style="color:var(--gold-lt)">${cppR}</div>
-          <div class="kl">${imp.buenas != null && imp.buenas > 0 ? 'por buena' : 'por pieza'}</div>
+          <div class="kl">${imp.buenas != null && imp.buenas > 0 ? 'imp/buena' : 'por pieza'}</div>
         </div>
+        ${imp.costo_combinado_por_pieza != null ? `<div class="imp-kpi">
+          <div class="kv" style="color:var(--green)">${fmtMoney(imp.costo_combinado_por_pieza)}</div>
+          <div class="kl">total/pieza</div>
+        </div>` : ''}
         <button class="btn-delete" onclick="eliminarImpresion('${imp.id}')" title="Eliminar">🗑</button>
       </div>
     </div>`;
   }).join('');
+}
+
+// ── Helpers de impresiones ────────────────────────────────────────────────────
+function updateImpCodigoPreview() {
+  const d = getData();
+  const next = 'IMP-' + String((d.ultimo_imp || 0) + 1).padStart(4, '0');
+  const el = document.getElementById('imp-codigo-preview');
+  if (el) { el.textContent = next; el.style.display = 'inline'; }
+}
+
+function refreshImpTandaSelect() {
+  const d   = getData();
+  const sel = document.getElementById('imp-tanda');
+  if (!sel) return;
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">— Sin vincular —</option>';
+  [...d.tandas].reverse().forEach(t => {
+    let piezasInfo = '';
+    if (t.completada && t.completacion) {
+      const pz = ['10','14','18'].reduce((s,k) => s + (t.completacion.produccion[k].piezas || 0), 0);
+      piezasInfo = ` · ✓ ${pz} pzas`;
+    } else {
+      piezasInfo = ' · ⏳ pendiente';
+    }
+    sel.innerHTML += `<option value="${t.codigo}"${t.codigo === cur ? ' selected' : ''}>${t.codigo}  (${t.fecha}${piezasInfo})</option>`;
+  });
+}
+
+function calcImpTandaPreview() {
+  const tandaCod = document.getElementById('imp-tanda')?.value || '';
+  const prevEl   = document.getElementById('imp-tanda-preview');
+  if (!prevEl) return;
+  if (!tandaCod) { prevEl.style.display = 'none'; return; }
+
+  const d = getData();
+  const t = d.tandas.find(x => x.codigo === tandaCod);
+  if (!t) { prevEl.style.display = 'none'; return; }
+
+  const buenas    = parseInt(document.getElementById('imp-buenas')?.value) || 0;
+  const impCosto  = parseFloat(document.getElementById('imp-costo')?.value) || 0;
+
+  let tandaPiezas = 0, costoVaciadoPieza = null;
+  if (t.completada && t.completacion) {
+    tandaPiezas = ['10','14','18'].reduce((s,k) => s + (t.completacion.produccion[k].piezas || 0), 0);
+    costoVaciadoPieza = tandaPiezas > 0 ? t.costo_total / tandaPiezas : null;
+  }
+  const impCppBuena = buenas > 0 && impCosto > 0 ? impCosto / buenas : null;
+
+  let combinadoRow = '';
+  if (costoVaciadoPieza !== null && impCppBuena !== null) {
+    const totalComb = impCppBuena + costoVaciadoPieza;
+    combinadoRow = `
+      <div style="margin-top:14px;padding-top:14px;border-top:1px solid rgba(255,255,255,.07)">
+        <div class="section-label" style="margin-bottom:10px">Costo total combinado / pieza buena</div>
+        <div class="imp-combined-grid">
+          <div class="cp-item">
+            <span class="cp-val" style="font-size:15px">${fmtMoney(impCppBuena)}</span>
+            <span class="cp-lbl">Impresión</span>
+          </div>
+          <div class="cp-item">
+            <span class="cp-val" style="font-size:15px">+ ${fmtMoney(costoVaciadoPieza)}</span>
+            <span class="cp-lbl">Vaciado de oro</span>
+          </div>
+          <div class="cp-item">
+            <span class="cp-val" style="color:var(--green);font-size:22px;font-weight:700">${fmtMoney(totalComb)}</span>
+            <span class="cp-lbl">= Total por pieza</span>
+          </div>
+        </div>
+      </div>`;
+  } else if (costoVaciadoPieza !== null && impCppBuena === null) {
+    combinadoRow = `<div style="margin-top:10px;font-size:12px;color:var(--muted)">
+      ℹ️ Ingresa piezas buenas e importe para ver el costo combinado.</div>`;
+  }
+
+  const estadoStr = t.completada
+    ? `<span style="color:var(--green);font-size:12px">✓ ${tandaPiezas} piezas vaciadas</span>`
+    : `<span style="color:var(--gold);font-size:12px">⏳ Pendiente — piezas no registradas aún</span>`;
+
+  prevEl.innerHTML = `
+    <div class="imp-combined-preview">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap">
+        <span class="imp-tanda-badge">${t.codigo}</span>
+        <span style="font-size:12px;color:var(--muted)">${t.fecha}</span>
+        ${estadoStr}
+      </div>
+      <div class="imp-combined-grid">
+        <div class="cp-item">
+          <span class="cp-val" style="font-size:15px">${fmtMoney(t.costo_total)}</span>
+          <span class="cp-lbl">Costo oro total</span>
+        </div>
+        <div class="cp-item">
+          <span class="cp-val" style="font-size:15px">${fmtNum(t.oro_pedido_g)} g</span>
+          <span class="cp-lbl">Oro 24k comprado</span>
+        </div>
+        <div class="cp-item">
+          <span class="cp-val" style="font-size:15px">${costoVaciadoPieza !== null ? fmtMoney(costoVaciadoPieza) : '—'}</span>
+          <span class="cp-lbl">Vaciado / pieza</span>
+        </div>
+      </div>
+      ${combinadoRow}
+    </div>`;
+  prevEl.style.display = 'block';
 }
 
 // Inicializar fecha en form impresiones al cargar
