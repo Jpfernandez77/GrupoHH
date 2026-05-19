@@ -440,6 +440,8 @@
         </div>
       </div>
 
+      <div id="sobrante-section" style="display:none"></div>
+
       <h3>Tandas Recientes</h3>
       <div id="recent-list" class="tanda-list"></div>
     </div>
@@ -514,6 +516,12 @@
 
       <div class="card">
         <h3>Oro Reciclado</h3>
+        <div class="field" style="margin-bottom:16px">
+          <label>Sobrante de tanda anterior <span style="color:var(--muted);font-weight:400">(opcional — autocompleta gramos y kilataje)</span></label>
+          <select id="n-origen-reciclado" onchange="usarSobranteDeTanda()">
+            <option value="">— Sin origen específico —</option>
+          </select>
+        </div>
         <div class="grid-2">
           <div class="field">
             <label>Gramos reciclados (0 si no hay)</label>
@@ -958,7 +966,7 @@ function showPage(id) {
   document.querySelectorAll('nav button')[idx[id]].classList.add('active');
 
   if (id === 'dashboard')    renderDashboard();
-  if (id === 'nueva')        refreshImpSelect('n-impresion');
+  if (id === 'nueva')        { refreshImpSelect('n-impresion'); refreshSobranteSelect(); }
   if (id === 'completar')    refreshSelector();
   if (id === 'tandas')       renderAllTandas();
   if (id === 'reportes')     initReportes();
@@ -1042,6 +1050,47 @@ function renderDashboard() {
   const picker = document.getElementById('month-picker');
   if (!picker.value) picker.value = today().slice(0, 7);
   renderMensual(picker.value);
+
+  // ── Sobrantes disponibles ────────────────────────────────────────────────
+  const tandasConSobrante = d.tandas.filter(t =>
+    t.completada && t.completacion && t.completacion.sobro_g > 0.001
+  );
+  const sobrantes = tandasConSobrante.map(t => {
+    const usado = d.tandas
+      .filter(x => x.origen_reciclado === t.codigo)
+      .reduce((s, x) => s + (x.oro_reciclado_g || 0), 0);
+    return { tanda: t, disponible: Math.max(0, t.completacion.sobro_g - usado) };
+  }).filter(s => s.disponible > 0.001);
+
+  const totalDisponible = sobrantes.reduce((s, x) => s + x.disponible, 0);
+
+  const sobranteSection = document.getElementById('sobrante-section');
+  if (sobranteSection) {
+    if (sobrantes.length > 0) {
+      sobranteSection.style.display = 'block';
+      sobranteSection.innerHTML = `
+        <div class="card" style="border-color:rgba(201,168,76,.3);margin-bottom:20px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+            <h3 style="margin:0">♻️ Sobrante de Oro Disponible</h3>
+            <span style="font-size:22px;font-weight:700;color:var(--gold)">${fmtNum(totalDisponible, 4)} g</span>
+          </div>
+          ${sobrantes.map(s => `
+            <div class="result-row" style="font-size:13px">
+              <span style="display:flex;align-items:center;gap:8px">
+                <span style="font-family:monospace;color:#6ab4f0;font-weight:700">${s.tanda.codigo}</span>
+                <span style="color:var(--muted)">${s.tanda.fecha}</span>
+                <span style="color:var(--muted)">@ ${fmtNum(s.tanda.completacion.kilate_sobro, 2)}k</span>
+              </span>
+              <span style="color:var(--gold);font-weight:600">${fmtNum(s.disponible, 4)} g</span>
+            </div>`).join('')}
+          <div style="margin-top:12px;font-size:12px;color:var(--muted)">
+            💡 Al crear una nueva tanda, selecciona "Sobrante de tanda anterior" para registrar su uso.
+          </div>
+        </div>`;
+    } else {
+      sobranteSection.style.display = 'none';
+    }
+  }
 
   const recientes = [...d.tandas].reverse().slice(0, 5);
   const el = document.getElementById('recent-list');
@@ -1529,7 +1578,8 @@ async function registrarTanda() {
 
   try {
     const d = getData();
-    const impVinc = document.getElementById('n-impresion')?.value || null;
+    const impVinc      = document.getElementById('n-impresion')?.value || null;
+    const origenRecic  = document.getElementById('n-origen-reciclado')?.value || null;
     const tanda = {
       codigo:              `ORO_${String(d.tandas.length + 1).padStart(8,'0')}`,
       fecha,
@@ -1544,6 +1594,7 @@ async function registrarTanda() {
       completada:          false,
       completacion:        null,
       impresion_vinculada: impVinc || null,
+      origen_reciclado:    origenRecic || null,
     };
     d.tandas.push(tanda);
     await syncGuardar(tanda);
@@ -1571,6 +1622,8 @@ function limpiarNueva() {
   document.getElementById('nueva-preview').style.display = 'none';
   const impEl = document.getElementById('n-impresion');
   if (impEl) impEl.value = '';
+  const origenEl = document.getElementById('n-origen-reciclado');
+  if (origenEl) origenEl.value = '';
 }
 
 // ── COMPLETAR TANDA ───────────────────────────────────────────────────────────
@@ -1761,9 +1814,12 @@ function openDetalle(codigo) {
   const fino = finoTanda(t);
   document.getElementById('modal-title').textContent = `Tanda ${t.codigo}`;
 
+  const d2 = getData();
   const reciclStr = t.oro_reciclado_g > 0
     ? `${fmtNum(t.oro_reciclado_g)} g (${t.kilate_reciclado}k) → ${fmtNum(t.oro_reciclado_g*(t.kilate_reciclado/24))} g puro`
     : '—';
+  const origenTanda = t.origen_reciclado
+    ? d2.tandas.find(x => x.codigo === t.origen_reciclado) : null;
 
   let html = `
     <h3>Información General</h3>
@@ -1772,6 +1828,12 @@ function openDetalle(codigo) {
     <div class="result-row"><span class="label">Costo total</span><span class="value">${fmtMoney(t.costo_total)}</span></div>
     <div class="result-row"><span class="label">Costo / g de oro 24k</span><span class="value gold">${fmtMoney(t.costo_g_24k)}</span></div>
     <div class="result-row"><span class="label">Oro reciclado</span><span class="value">${reciclStr}</span></div>
+    ${origenTanda ? `<div class="result-row">
+      <span class="label" style="padding-left:12px;color:var(--muted)">↳ Sobrante de</span>
+      <span class="value"><span style="font-family:monospace;color:#6ab4f0">${origenTanda.codigo}</span>
+        <span style="color:var(--muted);font-size:12px"> — ${origenTanda.fecha} · sobró ${fmtNum(origenTanda.completacion?.sobro_g ?? 0, 4)} g @ ${fmtNum(origenTanda.completacion?.kilate_sobro ?? 0, 2)}k</span>
+      </span>
+    </div>` : ''}
     <div class="result-row"><span class="label">Total oro puro disponible</span><span class="value gold">${fmtNum(fino)} g (24k equiv.)</span></div>
     <div class="result-row"><span class="label">Estado</span><span>${renderBadge(t)}</span></div>
     ${diasTanda(t) !== null ? `<div class="result-row"><span class="label">Tiempo de entrega</span><span class="value gold">${diasTanda(t)} días</span></div>` : ''}
@@ -1897,6 +1959,34 @@ function openDetalle(codigo) {
         <span class="value gold">${fmtNum(c.rendimiento_pct, 1)}%</span>
       </div>
     `;
+    // Sobrante tracking: show where this tanda's leftover gold went
+    if (c.sobro_g > 0.001) {
+      const usos = d2.tandas.filter(x => x.origen_reciclado === t.codigo);
+      const totalUsado = usos.reduce((s, x) => s + (x.oro_reciclado_g || 0), 0);
+      const disponible = Math.max(0, c.sobro_g - totalUsado);
+      const dispColor  = disponible > 0.001 ? 'var(--gold)' : 'var(--green)';
+      html += `
+        <hr class="sep">
+        <h3>Destino del Sobrante</h3>
+        <div class="result-row">
+          <span class="label">Sobrante calculado</span>
+          <span class="value gold">${fmtNum(c.sobro_g, 4)} g @ ${fmtNum(c.kilate_sobro, 2)}k</span>
+        </div>`;
+      if (usos.length > 0) {
+        usos.forEach(u => {
+          html += `<div class="result-row">
+            <span class="label" style="padding-left:12px;color:var(--muted)">↳ Usado en</span>
+            <span class="value"><span style="font-family:monospace;color:#6ab4f0">${u.codigo}</span>
+              <span style="color:var(--muted);font-size:12px"> — ${u.fecha} · ${fmtNum(u.oro_reciclado_g, 4)} g</span>
+            </span>
+          </div>`;
+        });
+      }
+      html += `<div class="result-row">
+        <span class="label">Sobrante disponible</span>
+        <span class="value" style="color:${dispColor}">${fmtNum(disponible, 4)} g${disponible < 0.001 ? ' ✓ Agotado' : ''}</span>
+      </div>`;
+    }
   } else {
     html += `
       <hr class="sep">
@@ -2343,6 +2433,50 @@ function renderImpresiones() {
       </div>
     </div>`;
   }).join('');
+}
+
+// ── Sobrante de oro ───────────────────────────────────────────────────────────
+function refreshSobranteSelect() {
+  const d   = getData();
+  const sel = document.getElementById('n-origen-reciclado');
+  if (!sel) return;
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">— Sin origen específico —</option>';
+
+  const tandasConSobrante = d.tandas.filter(t =>
+    t.completada && t.completacion && t.completacion.sobro_g > 0.001
+  );
+
+  tandasConSobrante.reverse().forEach(t => {
+    const usado = d.tandas
+      .filter(x => x.origen_reciclado === t.codigo)
+      .reduce((s, x) => s + (x.oro_reciclado_g || 0), 0);
+    const disponible = Math.max(0, t.completacion.sobro_g - usado);
+    const agotado    = disponible < 0.001;
+    const kilStr     = t.completacion.kilate_sobro > 0 ? ` @ ${fmtNum(t.completacion.kilate_sobro, 2)}k` : '';
+    const label      = agotado
+      ? `${t.codigo}  (${t.fecha}  ·  Agotado)`
+      : `${t.codigo}  (${t.fecha}  ·  ${fmtNum(disponible, 2)} g disponibles${kilStr})`;
+    sel.innerHTML += `<option value="${t.codigo}"${t.codigo === cur ? ' selected' : ''}${agotado ? ' disabled' : ''}>${label}</option>`;
+  });
+}
+
+function usarSobranteDeTanda() {
+  const codigo = document.getElementById('n-origen-reciclado').value;
+  if (!codigo) return;
+  const d = getData();
+  const t = d.tandas.find(x => x.codigo === codigo);
+  if (!t?.completacion) return;
+
+  const usado = d.tandas
+    .filter(x => x.origen_reciclado === codigo)
+    .reduce((s, x) => s + (x.oro_reciclado_g || 0), 0);
+  const disponible = Math.max(0, t.completacion.sobro_g - usado);
+
+  document.getElementById('n-reciclado').value       = disponible.toFixed(4);
+  document.getElementById('n-kilate-recic').value    = t.completacion.kilate_sobro > 0 ? t.completacion.kilate_sobro : '';
+  toggleKilateRecic();
+  actualizarPreviewNueva();
 }
 
 // ── Helpers de impresiones ────────────────────────────────────────────────────
