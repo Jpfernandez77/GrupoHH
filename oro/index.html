@@ -337,6 +337,24 @@
   .chart-card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 20px; }
   .chart-card h3 { margin-bottom: 16px; }
   @media (max-width: 700px) { .charts-grid { grid-template-columns: 1fr; } }
+
+  /* ── impresiones ── */
+  .imp-list { display:flex; flex-direction:column; gap:10px; }
+  .imp-item { background:var(--card); border:1px solid var(--border); border-radius:8px; padding:16px 20px; display:flex; align-items:center; justify-content:space-between; transition:border-color .15s; }
+  .imp-item:hover { border-color:var(--gold-dk); }
+  .imp-item .meta { flex:1; display:flex; flex-direction:column; gap:4px; }
+  .imp-item .imp-name { font-weight:700; color:var(--gold-lt); font-size:15px; }
+  .imp-item .imp-sub  { font-size:12px; color:var(--muted); }
+  .imp-item .imp-right { display:flex; align-items:center; gap:16px; flex-shrink:0; margin-left:16px; }
+  .imp-kpi { text-align:center; }
+  .imp-kpi .kv { font-size:18px; font-weight:700; }
+  .imp-kpi .kl { font-size:10px; color:var(--muted); text-transform:uppercase; letter-spacing:.5px; }
+  .calc-preview { background:rgba(201,168,76,.06); border:1px solid rgba(201,168,76,.15); border-radius:8px; padding:16px 20px; display:flex; gap:24px; flex-wrap:wrap; margin-top:12px; }
+  .calc-preview .cp-item { display:flex; flex-direction:column; gap:2px; }
+  .calc-preview .cp-val  { font-size:18px; font-weight:700; color:var(--gold-lt); }
+  .calc-preview .cp-lbl  { font-size:11px; color:var(--muted); }
+  .pct-bar-wrap { background:rgba(255,255,255,.06); border-radius:4px; height:6px; overflow:hidden; margin-top:4px; width:80px; }
+  .pct-bar-fill { height:100%; border-radius:4px; transition:width .3s; }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
 </head>
@@ -366,6 +384,7 @@
     <div class="divider"></div>
     <button onclick="showPage('tandas')">📋 &nbsp;Todas las Tandas</button>
     <button onclick="showPage('reportes')">📈 &nbsp;Reportes</button>
+    <button onclick="showPage('impresiones')">🖨 &nbsp;Impresiones</button>
     <div class="divider"></div>
     <button onclick="showPage('calculadora')">🧮 &nbsp;Calculadora</button>
   </nav>
@@ -573,6 +592,87 @@
       <div id="all-list" class="tanda-list"></div>
     </div>
 
+    <!-- ── IMPRESIONES ── -->
+    <div id="page-impresiones" class="page">
+      <h2>Impresiones 3D</h2>
+
+      <!-- Stats -->
+      <div class="stats-4" id="imp-stats" style="margin-bottom:24px"></div>
+
+      <!-- Formulario nueva impresión -->
+      <div class="card">
+        <h3>Registrar Impresión</h3>
+        <div class="grid-2">
+          <div class="field">
+            <label>Fecha</label>
+            <input type="date" id="imp-fecha" />
+          </div>
+          <div class="field">
+            <label>Nombre / Descripción</label>
+            <input type="text" id="imp-nombre" placeholder="Ej: Anillos Colección Primavera" />
+          </div>
+        </div>
+        <div class="grid-2" style="margin-top:16px">
+          <div class="field">
+            <label>Total de piezas impresas</label>
+            <input type="number" id="imp-total" placeholder="0" min="1" step="1" oninput="calcImpPreview()" />
+          </div>
+          <div class="field">
+            <label>Costo total ($)</label>
+            <input type="number" id="imp-costo" placeholder="0.00" min="0" step="0.01" oninput="calcImpPreview()" />
+          </div>
+        </div>
+
+        <!-- Preview costo/pieza -->
+        <div class="calc-preview" id="imp-preview" style="display:none">
+          <div class="cp-item">
+            <span class="cp-val" id="prev-cpp">—</span>
+            <span class="cp-lbl">Costo por pieza</span>
+          </div>
+        </div>
+
+        <hr style="border:none;border-top:1px solid var(--border);margin:20px 0">
+        <h3>Resultado de la Impresión</h3>
+        <div class="grid-2">
+          <div class="field">
+            <label>✅ Piezas buenas</label>
+            <input type="number" id="imp-buenas" placeholder="0" min="0" step="1" oninput="calcImpResultado()" />
+          </div>
+          <div class="field">
+            <label>❌ Piezas rotas / con defecto</label>
+            <input type="number" id="imp-rotas" placeholder="0" min="0" step="1" oninput="calcImpResultado()" />
+          </div>
+        </div>
+
+        <!-- Preview resultado -->
+        <div class="calc-preview" id="imp-resultado-preview" style="display:none">
+          <div class="cp-item">
+            <span class="cp-val" id="prev-exito" style="color:var(--green)">—</span>
+            <span class="cp-lbl">Tasa de éxito</span>
+            <div class="pct-bar-wrap"><div class="pct-bar-fill" id="prev-bar" style="background:var(--green)"></div></div>
+          </div>
+          <div class="cp-item">
+            <span class="cp-val" id="prev-cpp-real">—</span>
+            <span class="cp-lbl">Costo real / pieza buena</span>
+          </div>
+          <div class="cp-item">
+            <span class="cp-val" id="prev-perdida" style="color:var(--red)">—</span>
+            <span class="cp-lbl">Costo de piezas perdidas</span>
+          </div>
+        </div>
+
+        <div id="imp-error" style="display:none;color:var(--red);font-size:13px;margin-top:12px"></div>
+        <div class="actions">
+          <button class="btn btn-gold" onclick="guardarImpresion()">Guardar Impresión</button>
+          <button class="btn btn-outline" onclick="limpiarImpresion()">Limpiar</button>
+        </div>
+      </div>
+
+      <!-- Lista -->
+      <h3 style="margin-bottom:12px">Historial</h3>
+      <div id="imp-list" class="imp-list"></div>
+    </div>
+
     <!-- ── CALCULADORA ── -->
     <div id="page-calculadora" class="page">
       <h2>Calculadora de Material</h2>
@@ -731,7 +831,9 @@ const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJ
 let _data = null;
 
 function getData() {
-  return _data || { tandas: [], ultimo: 0 };
+  const d = _data || { tandas: [], ultimo: 0, impresiones: [] };
+  if (!d.impresiones) d.impresiones = [];
+  return d;
 }
 
 // Oro puro (24k equiv) total de una tanda: pedido ya es 24k, reciclado se convierte
@@ -805,14 +907,15 @@ function showPage(id) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
   document.getElementById('page-' + id).classList.add('active');
-  const idx = { dashboard: 0, nueva: 1, completar: 2, tandas: 3, reportes: 4, calculadora: 5 };
+  const idx = { dashboard: 0, nueva: 1, completar: 2, tandas: 3, reportes: 4, impresiones: 5, calculadora: 6 };
   document.querySelectorAll('nav button')[idx[id]].classList.add('active');
 
-  if (id === 'dashboard')   renderDashboard();
-  if (id === 'completar')   refreshSelector();
-  if (id === 'tandas')      renderAllTandas();
-  if (id === 'reportes')    initReportes();
-  if (id === 'calculadora') calcularMaterial();
+  if (id === 'dashboard')    renderDashboard();
+  if (id === 'completar')    refreshSelector();
+  if (id === 'tandas')       renderAllTandas();
+  if (id === 'reportes')     initReportes();
+  if (id === 'impresiones')  renderImpresiones();
+  if (id === 'calculadora')  calcularMaterial();
 }
 
 // ── helpers ───────────────────────────────────────────────────────────────────
@@ -1907,6 +2010,175 @@ async function syncActualizar(tanda) {
   saveLocal();
   await sbFetch('PATCH', `/rest/v1/tandas?codigo=eq.${encodeURIComponent(tanda.codigo)}`, { data: tanda });
 }
+
+// ── IMPRESIONES ───────────────────────────────────────────────────────────────
+function calcImpPreview() {
+  const total = parseFloat(document.getElementById('imp-total').value) || 0;
+  const costo = parseFloat(document.getElementById('imp-costo').value) || 0;
+  const prev  = document.getElementById('imp-preview');
+  if (total > 0 && costo > 0) {
+    document.getElementById('prev-cpp').textContent = fmtMoney(costo / total);
+    prev.style.display = 'flex';
+  } else {
+    prev.style.display = 'none';
+  }
+  calcImpResultado();
+}
+
+function calcImpResultado() {
+  const total  = parseFloat(document.getElementById('imp-total').value) || 0;
+  const costo  = parseFloat(document.getElementById('imp-costo').value) || 0;
+  const buenas = parseFloat(document.getElementById('imp-buenas').value);
+  const rotas  = parseFloat(document.getElementById('imp-rotas').value);
+  const prev   = document.getElementById('imp-resultado-preview');
+
+  if (!isNaN(buenas) && !isNaN(rotas) && total > 0 && costo > 0) {
+    const pct     = total > 0 ? (buenas / total) * 100 : 0;
+    const cppReal = buenas > 0 ? costo / buenas : 0;
+    const perdida = rotas > 0 && total > 0 ? (rotas / total) * costo : 0;
+    const color   = pct >= 90 ? 'var(--green)' : pct >= 70 ? 'var(--gold)' : 'var(--red)';
+
+    document.getElementById('prev-exito').textContent  = pct.toFixed(1) + '%';
+    document.getElementById('prev-exito').style.color  = color;
+    document.getElementById('prev-bar').style.width    = pct + '%';
+    document.getElementById('prev-bar').style.background = color;
+    document.getElementById('prev-cpp-real').textContent = buenas > 0 ? fmtMoney(cppReal) : '—';
+    document.getElementById('prev-perdida').textContent  = perdida > 0 ? fmtMoney(perdida) : '$0.00';
+    prev.style.display = 'flex';
+  } else {
+    prev.style.display = 'none';
+  }
+}
+
+function guardarImpresion() {
+  const errEl  = document.getElementById('imp-error');
+  errEl.style.display = 'none';
+
+  const fecha  = document.getElementById('imp-fecha').value;
+  const nombre = document.getElementById('imp-nombre').value.trim();
+  const total  = parseInt(document.getElementById('imp-total').value);
+  const costo  = parseFloat(document.getElementById('imp-costo').value);
+  const buenas = parseInt(document.getElementById('imp-buenas').value);
+  const rotas  = parseInt(document.getElementById('imp-rotas').value);
+
+  if (!fecha)               { errEl.textContent = 'Agrega la fecha.'; errEl.style.display='block'; return; }
+  if (!nombre)              { errEl.textContent = 'Agrega un nombre o descripción.'; errEl.style.display='block'; return; }
+  if (!total || total < 1)  { errEl.textContent = 'Ingresa el total de piezas impresas.'; errEl.style.display='block'; return; }
+  if (!costo || costo <= 0) { errEl.textContent = 'Ingresa el costo total.'; errEl.style.display='block'; return; }
+
+  const buen = isNaN(buenas) ? null : buenas;
+  const rot  = isNaN(rotas)  ? null : rotas;
+
+  if (buen !== null && rot !== null && (buen + rot) > total) {
+    errEl.textContent = 'La suma de buenas + rotas no puede superar el total de piezas.';
+    errEl.style.display = 'block'; return;
+  }
+
+  const imp = {
+    id:     'IMP-' + fecha.replace(/-/g,'') + '-' + Date.now(),
+    fecha, nombre,
+    total_piezas: total,
+    costo_total:  costo,
+    costo_por_pieza: costo / total,
+    buenas: buen,
+    rotas:  rot,
+    costo_por_pieza_buena: buen > 0 ? costo / buen : null,
+    tasa_exito: buen !== null ? buen / total : null,
+    notas: '',
+  };
+
+  const d = getData();
+  d.impresiones.push(imp);
+  saveLocal();
+
+  toast(`Impresión "${nombre}" guardada ✓`);
+  limpiarImpresion();
+  renderImpresiones();
+}
+
+function limpiarImpresion() {
+  ['imp-fecha','imp-nombre','imp-total','imp-costo','imp-buenas','imp-rotas']
+    .forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+  document.getElementById('imp-fecha').value = today();
+  document.getElementById('imp-preview').style.display = 'none';
+  document.getElementById('imp-resultado-preview').style.display = 'none';
+  document.getElementById('imp-error').style.display = 'none';
+}
+
+function eliminarImpresion(id) {
+  if (!confirm('¿Eliminar esta impresión?')) return;
+  const d = getData();
+  d.impresiones = d.impresiones.filter(i => i.id !== id);
+  saveLocal();
+  renderImpresiones();
+  toast('Impresión eliminada', 'var(--red)');
+}
+
+function renderImpresiones() {
+  const d    = getData();
+  const imps = [...(d.impresiones || [])].reverse();
+
+  // Stats
+  const total   = imps.length;
+  const totPzas = imps.reduce((s, i) => s + (i.total_piezas || 0), 0);
+  const totBuen = imps.filter(i => i.buenas != null).reduce((s, i) => s + i.buenas, 0);
+  const totRot  = imps.filter(i => i.rotas  != null).reduce((s, i) => s + i.rotas,  0);
+  const avgExito = imps.filter(i => i.tasa_exito != null).length
+    ? (imps.filter(i => i.tasa_exito != null).reduce((s,i) => s + i.tasa_exito, 0) /
+       imps.filter(i => i.tasa_exito != null).length * 100).toFixed(1)
+    : '—';
+  const avgCpp = imps.filter(i => i.costo_por_pieza_buena != null).length
+    ? imps.filter(i => i.costo_por_pieza_buena != null)
+          .reduce((s,i) => s + i.costo_por_pieza_buena, 0) /
+       imps.filter(i => i.costo_por_pieza_buena != null).length
+    : null;
+
+  document.getElementById('imp-stats').innerHTML = `
+    <div class="stat-card"><div class="s-label">Lotes registrados</div><div class="s-value">${total}</div></div>
+    <div class="stat-card"><div class="s-label">Total piezas</div><div class="s-value">${totPzas}</div><div class="s-sub">${totBuen} buenas · ${totRot} rotas</div></div>
+    <div class="stat-card"><div class="s-label">Tasa de éxito prom.</div><div class="s-value" style="color:${parseFloat(avgExito)>=90?'var(--green)':parseFloat(avgExito)>=70?'var(--gold)':'var(--red)'}">${avgExito}${avgExito!=='—'?'%':''}</div></div>
+    <div class="stat-card"><div class="s-label">Costo prom. / pieza buena</div><div class="s-value" style="font-size:18px">${avgCpp ? fmtMoney(avgCpp) : '—'}</div></div>
+  `;
+
+  // Lista
+  const el = document.getElementById('imp-list');
+  if (!imps.length) {
+    el.innerHTML = '<div class="empty"><div class="big">🖨</div><p>Sin impresiones registradas.</p></div>';
+    return;
+  }
+
+  el.innerHTML = imps.map(imp => {
+    const pct   = imp.tasa_exito != null ? (imp.tasa_exito * 100).toFixed(1) : null;
+    const color = pct != null ? (pct >= 90 ? 'var(--green)' : pct >= 70 ? 'var(--gold)' : 'var(--red)') : 'var(--muted)';
+    const cppR  = imp.costo_por_pieza_buena != null ? fmtMoney(imp.costo_por_pieza_buena) : fmtMoney(imp.costo_por_pieza);
+
+    return `<div class="imp-item">
+      <div class="meta">
+        <span class="imp-name">${imp.nombre}</span>
+        <span class="imp-sub">${imp.fecha} · ${imp.total_piezas} piezas · Costo ${fmtMoney(imp.costo_total)}</span>
+        ${imp.buenas != null ? `<span class="imp-sub">✅ ${imp.buenas} buenas · ❌ ${imp.rotas ?? 0} rotas</span>` : '<span class="imp-sub" style="color:var(--muted);font-style:italic">Resultado pendiente</span>'}
+      </div>
+      <div class="imp-right">
+        ${pct != null ? `<div class="imp-kpi">
+          <div class="kv" style="color:${color}">${pct}%</div>
+          <div class="kl">Éxito</div>
+          <div class="pct-bar-wrap"><div class="pct-bar-fill" style="width:${pct}%;background:${color}"></div></div>
+        </div>` : ''}
+        <div class="imp-kpi">
+          <div class="kv" style="color:var(--gold-lt)">${cppR}</div>
+          <div class="kl">${imp.buenas != null && imp.buenas > 0 ? 'por buena' : 'por pieza'}</div>
+        </div>
+        <button class="btn-delete" onclick="eliminarImpresion('${imp.id}')" title="Eliminar">🗑</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// Inicializar fecha en form impresiones al cargar
+document.addEventListener('DOMContentLoaded', () => {
+  const fi = document.getElementById('imp-fecha');
+  if (fi && !fi.value) fi.value = today();
+});
 </script>
 </body>
 </html>
