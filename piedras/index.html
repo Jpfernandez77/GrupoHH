@@ -124,8 +124,9 @@
     .piedra-item .right { display:flex; align-items:center; gap:10px; flex-shrink:0; margin-left:12px; }
 
     .btn-icon { background:none; border:1px solid transparent; border-radius:6px; color:var(--muted); cursor:pointer; padding:5px 8px; font-size:15px; line-height:1; transition:all .15s; }
-    .btn-icon:hover       { color:var(--red);  border-color:var(--red);  background:rgba(224,92,92,.08); }
-    .btn-icon.edit:hover  { color:var(--blue); border-color:var(--blue); background:rgba(106,180,240,.08); }
+    .btn-icon:hover       { color:var(--red);    border-color:var(--red);    background:rgba(224,92,92,.08); }
+    .btn-icon.edit:hover  { color:var(--blue);   border-color:var(--blue);   background:rgba(106,180,240,.08); }
+    .btn-icon.dup:hover   { color:var(--teal);   border-color:var(--teal);   background:rgba(74,212,200,.08); }
 
     /* Search bar */
     .search-wrap { position:relative; margin-bottom:14px; }
@@ -944,6 +945,7 @@ function piedraItemHtml(p) {
               </button>`).join('')}
           </div>
         </div>
+        <button class="btn-icon dup" onclick="duplicarPiedra('${p.codigo}')" title="Duplicar">⧉</button>
         <button class="btn-icon edit" onclick="editarPiedra('${p.codigo}')">✏️</button>
         <button class="btn-icon" onclick="eliminarPiedra('${p.codigo}')">🗑</button>
       </div>
@@ -1122,6 +1124,22 @@ function editarPiedra(codigo) {
     if (p.certificado) { _archivos.cert = p.certificado; document.getElementById('file-cert-name').textContent = '✓ '+p.certificado.nombre; }
     if (p.foto)        { _archivos.foto = p.foto;         document.getElementById('file-foto-name').textContent = '✓ '+p.foto.nombre; }
   }
+}
+
+// ── DUPLICAR ──────────────────────────────────────────────────────────────────
+function duplicarPiedra(codigo) {
+  const d = loadData();
+  const original = d.piedras.find(p => p.codigo === codigo);
+  if (!original) return;
+  const copia = { ...original };
+  copia.codigo        = nextCodigo(original.cliente, original.area_negocio);
+  copia.fecha_llegada = today();
+  copia.historial_estados = [{ estado: copia.estado, desde: new Date().toISOString() }];
+  d.piedras.push(copia);
+  saveData(d);
+  syncGuardar(copia);
+  toast(`Duplicado: ${copia.codigo} ✓`, 'var(--teal)');
+  renderDashboard(); renderInventario();
 }
 
 // ── ELIMINAR ──────────────────────────────────────────────────────────────────
