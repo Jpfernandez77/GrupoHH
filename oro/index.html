@@ -925,13 +925,14 @@ function diasTanda(t) {
   return Math.round(ms / 86400000);
 }
 
-async function sbFetch(method, path, body) {
+async function sbFetch(method, path, body, extraHeaders = {}) {
   const headers = {
     'apikey': SB_KEY,
     'Authorization': 'Bearer ' + SB_KEY,
     'Content-Type': 'application/json',
+    ...extraHeaders,
   };
-  if (method === 'POST') headers['Prefer'] = 'return=minimal';
+  if (method === 'POST' && !extraHeaders['Prefer']) headers['Prefer'] = 'return=minimal';
   const r = await fetch(SB_URL + path, {
     method,
     headers,
@@ -944,19 +945,29 @@ async function sbFetch(method, path, body) {
 
 async function initData() {
   // 1. Carga local inmediata
-  try { _data = JSON.parse(localStorage.getItem(STORE_KEY)) || { tandas: [], ultimo: 0 }; }
-  catch { _data = { tandas: [], ultimo: 0 }; }
+  try { _data = JSON.parse(localStorage.getItem(STORE_KEY)) || { tandas: [], ultimo: 0, impresiones: [], ultimo_imp: 0 }; }
+  catch { _data = { tandas: [], ultimo: 0, impresiones: [], ultimo_imp: 0 }; }
+  if (!_data.impresiones) _data.impresiones = [];
+  if (typeof _data.ultimo_imp !== 'number') _data.ultimo_imp = 0;
 
   // 2. Carga desde Supabase (fuente de verdad)
+  // Pedimos codigo + data para poder separar la fila __config__ de las tandas reales
   try {
-    const rows = await sbFetch('GET', '/rest/v1/tandas?select=data&order=id.asc');
+    const rows = await sbFetch('GET', '/rest/v1/tandas?select=codigo,data&order=id.asc');
     if (rows && rows.length > 0) {
-      const tandas = rows.map(r => r.data);
+      const configRow  = rows.find(r => r.codigo === '__config__');
+      const tandaRows  = rows.filter(r => r.codigo !== '__config__');
+
+      const tandas = tandaRows.map(r => r.data);
       const ultimo = tandas.reduce((max, t) => {
         const n = parseInt((t.codigo || '').replace('ORO_', '')) || 0;
         return n > max ? n : max;
       }, 0);
-      _data = { tandas, ultimo };
+
+      const impresiones = configRow?.data?.impresiones || [];
+      const ultimo_imp  = configRow?.data?.ultimo_imp  || 0;
+
+      _data = { tandas, ultimo, impresiones, ultimo_imp };
       saveLocal();
     }
   } catch(e) {
@@ -977,6 +988,28 @@ async function syncCompletar(codigo, completacion) {
   saveLocal();
   const tanda = getData().tandas.find(t => t.codigo === codigo);
   if (tanda) await sbFetch('PATCH', `/rest/v1/tandas?codigo=eq.${encodeURIComponent(codigo)}`, { data: tanda });
+}
+
+async function syncImpresiones() {
+  saveLocal();
+  const d = getData();
+  const configData = { impresiones: d.impresiones || [], ultimo_imp: d.ultimo_imp || 0 };
+  // Intenta PATCH primero; si no hay fila, hace POST
+  try {
+    const patched = await sbFetch('PATCH',
+      '/rest/v1/tandas?codigo=eq.__config__',
+      { data: configData },
+      { 'Prefer': 'return=representation' }
+    );
+    // PATCH devuelve array vacío si no existe la fila → crear con POST
+    if (!patched || patched.length === 0) {
+      await sbFetch('POST', '/rest/v1/tandas',
+        { codigo: '__config__', data: configData }
+      );
+    }
+  } catch(e) {
+    console.warn('Error sincronizando impresiones:', e.message);
+  }
 }
 
 // ── nav ───────────────────────────────────────────────────────────────────────
@@ -2341,6 +2374,7 @@ function guardarImpresion() {
 
   d.impresiones.push(imp);
   saveLocal();
+  syncImpresiones().catch(() => {});
 
   toast(`${codigo} — "${nombre}" guardada ✓`);
   limpiarImpresion();
@@ -2364,6 +2398,7 @@ function eliminarImpresion(id) {
   const d = getData();
   d.impresiones = d.impresiones.filter(i => i.id !== id);
   saveLocal();
+  syncImpresiones().catch(() => {});
   renderImpresiones();
   toast('Impresión eliminada', 'var(--red)');
 }
