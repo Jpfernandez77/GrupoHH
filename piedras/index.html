@@ -544,16 +544,60 @@
 
 <script>
 const STORE_KEY  = 'inventario_piedras_v2';
+const SB_URL     = 'https://yzqgwdnivvannvnjxvst.supabase.co';
+const SB_KEY     = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl6cWd3ZG5pdnZhbm52bmp4dnN0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkxNDY0NzEsImV4cCI6MjA5NDcyMjQ3MX0.dnbVfuqMQNYBRF8C6q4xFfy6xhleA48YLpl6ji476Qw';
+let _data        = { piedras: [] };
 let _archivos    = {};
 let _tipoActual  = 'individual';
 let _editCodigo  = null;
 
-// ── DATA ──────────────────────────────────────────────────────────────────────
-function loadData() {
-  try { return JSON.parse(localStorage.getItem(STORE_KEY)) || { piedras:[] }; }
-  catch { return { piedras:[] }; }
+// ── SUPABASE ──────────────────────────────────────────────────────────────────
+async function sbFetch(method, path, body) {
+  const headers = {
+    'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY, 'Content-Type': 'application/json',
+  };
+  if (method === 'POST') headers['Prefer'] = 'return=minimal';
+  const r = await fetch(SB_URL + path, { method, headers, body: body ? JSON.stringify(body) : undefined });
+  if (!r.ok) throw new Error('Supabase ' + r.status);
+  const text = await r.text();
+  return text ? JSON.parse(text) : null;
 }
-function saveData(d) { localStorage.setItem(STORE_KEY, JSON.stringify(d)); }
+
+async function initData() {
+  // 1. Cargar localStorage primero (instantáneo)
+  try { _data = JSON.parse(localStorage.getItem(STORE_KEY)) || { piedras: [] }; }
+  catch { _data = { piedras: [] }; }
+  renderDashboard();
+  // 2. Sincronizar Supabase en segundo plano
+  try {
+    const rows = await sbFetch('GET', '/rest/v1/piedras?select=data&order=id.asc');
+    if (rows && rows.length > 0) {
+      _data = { piedras: rows.map(r => r.data) };
+      saveLocal();
+      renderDashboard();
+    }
+  } catch(e) { console.warn('Supabase no disponible:', e.message); }
+}
+
+function loadData()    { return _data; }
+function saveLocal()   { localStorage.setItem(STORE_KEY, JSON.stringify(_data)); }
+function saveData(d)   { _data = d; saveLocal(); }
+
+async function syncGuardar(piedra) {
+  saveLocal();
+  try { await sbFetch('POST', '/rest/v1/piedras', { codigo: piedra.codigo, data: piedra }); }
+  catch(e) { console.warn('Sync guardar:', e.message); }
+}
+async function syncActualizar(piedra) {
+  saveLocal();
+  try { await sbFetch('PATCH', `/rest/v1/piedras?codigo=eq.${encodeURIComponent(piedra.codigo)}`, { data: piedra }); }
+  catch(e) { console.warn('Sync actualizar:', e.message); }
+}
+async function syncEliminar(codigo) {
+  saveLocal();
+  try { await sbFetch('DELETE', `/rest/v1/piedras?codigo=eq.${encodeURIComponent(codigo)}`); }
+  catch(e) { console.warn('Sync eliminar:', e.message); }
+}
 
 // ── HELPERS ───────────────────────────────────────────────────────────────────
 function today() { return new Date().toISOString().slice(0,10); }
@@ -821,17 +865,25 @@ function registrarPiedra() {
   if (_editCodigo) {
     const idx = d.piedras.findIndex(p => p.codigo === _editCodigo);
     if (idx !== -1) {
-      // Preserve historial if exists
       if (d.piedras[idx].historial_estados) piedra.historial_estados = d.piedras[idx].historial_estados;
       d.piedras[idx] = piedra;
+    }
+    saveData(d);
+    if (piedra.codigo !== _editCodigo) {
+      // Código cambió: borrar el viejo e insertar nuevo en Supabase
+      syncEliminar(_editCodigo);
+      syncGuardar(piedra);
+    } else {
+      syncActualizar(piedra);
     }
     toast(`${piedra.codigo} actualizado ✓`);
   } else {
     piedra.historial_estados = [{ estado: piedra.estado, desde: new Date().toISOString() }];
     d.piedras.push(piedra);
+    saveData(d);
+    syncGuardar(piedra);
     toast(`${piedra.codigo} registrado ✓`);
   }
-  saveData(d);
   limpiarNueva();
   showPage('inventario');
 }
@@ -905,6 +957,7 @@ function eliminarPiedra(codigo) {
   const d = loadData();
   d.piedras = d.piedras.filter(p => p.codigo !== codigo);
   saveData(d);
+  syncEliminar(codigo);
   renderDashboard(); renderInventario();
   toast(`${codigo} eliminado ✓`);
 }
@@ -1036,6 +1089,7 @@ function cambiarEstado(codigo, nuevoEstado, reabrirDetalle = true) {
   h.push({ estado: nuevoEstado, desde: ahora });
   p.estado = nuevoEstado;
   saveData(d);
+  syncActualizar(p);
   const lbl = ESTADOS[nuevoEstado]?.[1] || nuevoEstado;
   toast(`Estado: ${lbl}`);
   renderDashboard(); renderInventario();
@@ -1189,7 +1243,7 @@ function renderTendencias() {
 // ── INIT ──────────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('n-fecha').value = today();
-  renderDashboard();
+  initData();
 });
 document.addEventListener('click', () => {
   if (_openSpop) { _openSpop.classList.remove('open'); _openSpop = null; }
