@@ -112,6 +112,12 @@
     .piedra-list { display:flex; flex-direction:column; gap:10px; }
     .piedra-item { background:var(--card); border:1px solid var(--border); border-radius:8px; padding:16px 20px; display:flex; align-items:center; justify-content:space-between; transition:border-color .15s; }
     .piedra-item:hover { border-color:var(--gold-dk); }
+
+    /* Client group header */
+    .client-grp-hdr { display:flex; align-items:center; gap:8px; padding:6px 4px 4px; color:var(--gold-lt); font-size:13px; font-weight:700; border-bottom:1px solid rgba(196,168,130,.12); margin-top:6px; }
+    .client-grp-hdr:first-child { margin-top:0; }
+    .client-grp-cnt { font-size:11px; font-weight:600; color:var(--muted); background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:1px 7px; }
+    .cert-tag { font-size:11px; color:var(--muted); font-weight:400; margin-left:8px; letter-spacing:.2px; }
     .piedra-item .meta { display:flex; flex-direction:column; gap:4px; cursor:pointer; flex:1; min-width:0; }
     .piedra-item .code { font-weight:700; color:var(--gold-lt); font-size:15px; }
     .piedra-item .sub  { font-size:12px; color:var(--muted); }
@@ -835,9 +841,36 @@ function renderInventario() {
   );
 
   const el = document.getElementById('inv-list');
-  el.innerHTML = ps.length
-    ? ps.map(p => piedraItemHtml(p)).join('')
-    : `<div class="empty"><div class="big">🔍</div><p>No se encontraron piedras.</p></div>`;
+  if (!ps.length) {
+    el.innerHTML = `<div class="empty"><div class="big">🔍</div><p>No se encontraron piedras.</p></div>`;
+    return;
+  }
+
+  // Group by client, preserving order (most-recent first)
+  const byCliente = {};
+  ps.forEach(p => {
+    const k = p.cliente || '';
+    if (!byCliente[k]) byCliente[k] = [];
+    byCliente[k].push(p);
+  });
+
+  // Build ordered groups in the order each client first appears
+  const seen = new Set();
+  const orderedGroups = [];
+  ps.forEach(p => {
+    const k = p.cliente || '';
+    if (!seen.has(k)) { seen.add(k); orderedGroups.push([k, byCliente[k]]); }
+  });
+
+  let html = '';
+  for (const [cliente, arr] of orderedGroups) {
+    if (arr.length >= 2) {
+      const nombre = cliente || 'Sin cliente';
+      html += `<div class="client-grp-hdr">👤 ${nombre}<span class="client-grp-cnt">${arr.length}</span></div>`;
+    }
+    html += arr.map(p => piedraItemHtml(p)).join('');
+  }
+  el.innerHTML = html;
 }
 
 function piedraItemHtml(p) {
@@ -847,10 +880,14 @@ function piedraItemHtml(p) {
   } else {
     info = [p.quilates ? fmtNum(p.quilates,2)+' ct':'' , p.color, p.claridad, p.forma].filter(Boolean).join(' · ');
   }
+  const meleeBadge = p.tipo === 'melee' ? '<span class="badge badge-melee" style="font-size:10px;padding:1px 6px">MELEE</span>' : '';
+  const certTag = (p.tipo !== 'melee' && p.laboratorio && p.laboratorio !== 'Sin certificado')
+    ? `<span class="cert-tag">${p.laboratorio}${p.numero_cert ? ' ' + p.numero_cert : ''}</span>`
+    : '';
   return `
     <div class="piedra-item">
       <div class="meta" onclick="openDetalle('${p.codigo}')">
-        <span class="code">${p.codigo} ${p.tipo==='melee' ? '<span class="badge badge-melee" style="font-size:10px;padding:1px 6px">MELEE</span>' : ''}</span>
+        <span class="code">${p.codigo} ${meleeBadge}${certTag}</span>
         <span class="sub">${p.fecha_llegada} · ${p.canal} · ${p.area_negocio}${p.vendedora?' · '+p.vendedora:''}${p.cliente?' · '+p.cliente:''}</span>
         <span class="sub" style="color:var(--gold-lt)">${info}</span>
       </div>
