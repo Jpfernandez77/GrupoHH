@@ -368,10 +368,23 @@
             <div class="field"><label>Quilates (ct)</label><input type="number" id="n-quilates" placeholder="1.00" min="0" step="0.01" /></div>
             <div class="field">
               <label>Color</label>
-              <select id="n-color">
+              <select id="n-color" onchange="checkFancyColor()">
                 <option value="">— —</option>
                 <option>D</option><option>E</option><option>F</option><option>G</option>
                 <option>H</option><option>I</option><option>J</option><option>K</option><option>L</option><option>M</option>
+                <option disabled>── Fancy Color ──</option>
+                <option value="Fancy Yellow">Fancy Yellow</option>
+                <option value="Fancy Pink">Fancy Pink</option>
+                <option value="Fancy Blue">Fancy Blue</option>
+                <option value="Fancy Green">Fancy Green</option>
+                <option value="Fancy Orange">Fancy Orange</option>
+                <option value="Fancy Red">Fancy Red</option>
+                <option value="Fancy Brown">Fancy Brown</option>
+                <option value="Fancy Black">Fancy Black</option>
+                <option value="Fancy Gray">Fancy Gray</option>
+                <option value="Fancy White">Fancy White</option>
+                <option value="Fancy Purple">Fancy Purple</option>
+                <option value="Fancy Violet">Fancy Violet</option>
               </select>
             </div>
             <div class="field">
@@ -390,6 +403,21 @@
                 <option>Excellent</option><option>Very Good</option><option>Good</option><option>Fair</option><option>Poor</option>
               </select>
             </div>
+          </div>
+          <div class="field mt-16" id="fancy-intensity-field" style="display:none">
+            <label>Intensidad Fancy</label>
+            <select id="n-intensidad">
+              <option value="">— —</option>
+              <option>Faint</option>
+              <option>Very Light</option>
+              <option>Light</option>
+              <option>Fancy Light</option>
+              <option>Fancy</option>
+              <option>Fancy Intense</option>
+              <option>Fancy Vivid</option>
+              <option>Fancy Deep</option>
+              <option>Fancy Dark</option>
+            </select>
           </div>
           <div class="field mt-16">
             <label>Forma</label>
@@ -749,6 +777,13 @@ function showPage(id) {
 }
 
 // ── TIPO TOGGLE ───────────────────────────────────────────────────────────────
+function checkFancyColor() {
+  const color = document.getElementById('n-color')?.value || '';
+  const isFancy = color.startsWith('Fancy');
+  document.getElementById('fancy-intensity-field').style.display = isFancy ? 'block' : 'none';
+  if (!isFancy) { const el = document.getElementById('n-intensidad'); if(el) el.value = ''; }
+}
+
 function setTipo(tipo) {
   _tipoActual = tipo;
   document.getElementById('btn-individual').classList.toggle('active', tipo==='individual');
@@ -882,7 +917,10 @@ function piedraItemHtml(p) {
   if (p.tipo === 'melee') {
     info = [p.m_corte, p.m_tamano, p.m_origen, p.m_cantidad ? p.m_cantidad+' pzas' : '', p.m_peso ? p.m_peso+'ct' : ''].filter(Boolean).join(' · ');
   } else {
-    info = [p.quilates ? fmtNum(p.quilates,2)+' ct':'' , p.color, p.claridad, p.forma].filter(Boolean).join(' · ');
+    const colorDisp = p.color && p.color.startsWith('Fancy')
+      ? (p.intensidad_fancy ? p.intensidad_fancy + ' ' + p.color.replace('Fancy ','') : p.color)
+      : p.color;
+    info = [p.quilates ? fmtNum(p.quilates,2)+' ct':'', colorDisp, p.claridad, p.forma].filter(Boolean).join(' · ');
   }
   const meleeBadge = p.tipo === 'melee' ? '<span class="badge badge-melee" style="font-size:10px;padding:1px 6px">MELEE</span>' : '';
   const certTag = (p.tipo !== 'melee' && p.laboratorio && p.laboratorio !== 'Sin certificado')
@@ -984,6 +1022,7 @@ function registrarPiedra() {
       largo_mm:    parseFloat(document.getElementById('n-largo').value)||null,
       ancho_mm:    parseFloat(document.getElementById('n-ancho').value)||null,
       prof_mm:     parseFloat(document.getElementById('n-prof').value) ||null,
+      intensidad_fancy: document.getElementById('n-color').value.startsWith('Fancy') ? (document.getElementById('n-intensidad').value||null) : null,
       laboratorio: document.getElementById('n-lab').value,
       numero_cert: document.getElementById('n-numcert').value.trim(),
       certificado: _archivos.cert || null,
@@ -1020,7 +1059,7 @@ function registrarPiedra() {
 
 function limpiarNueva() {
   ['n-quilates','n-color','n-claridad','n-corte','n-forma','n-largo','n-ancho',
-   'n-prof','n-lab','n-numcert','n-notas','n-cliente','n-numguia','n-vendedora','m-corte','m-tamano','m-cantidad','m-peso']
+   'n-prof','n-lab','n-numcert','n-notas','n-cliente','n-numguia','n-vendedora','n-intensidad','m-corte','m-tamano','m-cantidad','m-peso']
     .forEach(id => { const el=document.getElementById(id); if(el) el.value=''; });
   document.getElementById('n-fecha').value   = today();
   document.getElementById('n-canal').value   = 'NIVODA';
@@ -1035,6 +1074,7 @@ function limpiarNueva() {
   document.getElementById('page-nueva').querySelector('h2').textContent = 'Registrar Nueva Piedra';
   document.querySelector('button[onclick="registrarPiedra()"]').textContent = 'Guardar Piedra';
   setTipo('individual');
+  checkFancyColor();
 }
 
 // ── EDITAR ────────────────────────────────────────────────────────────────────
@@ -1076,6 +1116,8 @@ function editarPiedra(codigo) {
     document.getElementById('n-prof').value     = p.prof_mm || '';
     document.getElementById('n-lab').value      = p.laboratorio || 'Sin certificado';
     document.getElementById('n-numcert').value  = p.numero_cert || '';
+    checkFancyColor();
+    if (p.intensidad_fancy) document.getElementById('n-intensidad').value = p.intensidad_fancy;
     _archivos = {};
     if (p.certificado) { _archivos.cert = p.certificado; document.getElementById('file-cert-name').textContent = '✓ '+p.certificado.nombre; }
     if (p.foto)        { _archivos.foto = p.foto;         document.getElementById('file-foto-name').textContent = '✓ '+p.foto.nombre; }
@@ -1114,12 +1156,17 @@ function openDetalle(codigo) {
     `;
   } else {
     html += `
-      <div class="cs-grid">
-        <div class="cs-card"><div class="cs-label">Quilates</div><div class="cs-value">${fmtNum(p.quilates,2)}</div><div class="cs-sub">ct</div></div>
-        <div class="cs-card"><div class="cs-label">Color</div><div class="cs-value">${p.color||'—'}</div></div>
-        <div class="cs-card"><div class="cs-label">Claridad</div><div class="cs-value" style="font-size:15px">${p.claridad||'—'}</div></div>
-        <div class="cs-card"><div class="cs-label">Corte</div><div class="cs-value" style="font-size:13px">${p.corte||'—'}</div></div>
-      </div>
+      ${(() => {
+        const isFancy = p.color && p.color.startsWith('Fancy');
+        const colorLabel = isFancy ? p.color : (p.color || '—');
+        const colorSub   = isFancy && p.intensidad_fancy ? p.intensidad_fancy : '';
+        return `<div class="cs-grid">
+          <div class="cs-card"><div class="cs-label">Quilates</div><div class="cs-value">${fmtNum(p.quilates,2)}</div><div class="cs-sub">ct</div></div>
+          <div class="cs-card"><div class="cs-label">Color</div><div class="cs-value" style="font-size:${isFancy?'11px':'18px'};color:${isFancy?'var(--rose)':'var(--gold-lt)'}">${colorLabel}</div>${colorSub?`<div class="cs-sub" style="color:var(--rose)">${colorSub}</div>`:''}</div>
+          <div class="cs-card"><div class="cs-label">Claridad</div><div class="cs-value" style="font-size:15px">${p.claridad||'—'}</div></div>
+          <div class="cs-card"><div class="cs-label">Corte</div><div class="cs-value" style="font-size:13px">${p.corte||'—'}</div></div>
+        </div>`;
+      })()}
       <div class="result-row"><span class="rl">Forma</span><span class="rv"><span class="forma-badge">${p.forma||'—'}</span></span></div>
       <div class="result-row"><span class="rl">Dimensiones</span><span class="rv">${p.largo_mm&&p.ancho_mm&&p.prof_mm ? `${fmtNum(p.largo_mm)} × ${fmtNum(p.ancho_mm)} × ${fmtNum(p.prof_mm)} mm`:'—'}</span></div>
       <div class="result-row"><span class="rl">Certificado</span><span class="rv">${p.laboratorio && p.laboratorio!=='Sin certificado' ? `${p.laboratorio}${p.numero_cert?' · '+p.numero_cert:''}` : 'Sin certificado'}</span></div>
