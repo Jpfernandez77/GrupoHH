@@ -636,10 +636,8 @@
           <div class="field">
             <label>Material</label>
             <select id="imp-material">
-              <option value="resina">Resina estándar</option>
-              <option value="resina_flexible">Resina flexible</option>
-              <option value="cera">Cera / Wax</option>
-              <option value="otro">Otro</option>
+              <option value="resina">Resina</option>
+              <option value="cera">Cera</option>
             </select>
           </div>
         </div>
@@ -2304,7 +2302,7 @@ function renderImpresiones() {
     return;
   }
 
-  const matLabels = { resina:'Resina', resina_flexible:'Resina flex.', cera:'Cera/Wax', otro:'Otro' };
+  const matLabels = { resina:'Resina', cera:'Cera' };
 
   el.innerHTML = imps.map(imp => {
     const lt      = linkedTandaFor(imp);
