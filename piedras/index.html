@@ -218,6 +218,14 @@
     .tiempo-row .trl { min-width:140px; color:var(--muted); font-size:12px; }
     .tiempo-hh  { min-width:100px; }
     .tiempo-b2b { min-width:100px; }
+
+    /* Settings / Config */
+    .cfg-chips { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:14px; min-height:32px; }
+    .cfg-chip  { display:flex; align-items:center; gap:6px; background:var(--surface); border:1px solid var(--border); border-radius:20px; padding:5px 8px 5px 12px; font-size:13px; }
+    .cfg-chip .chip-del { background:none; border:none; color:var(--muted); cursor:pointer; font-size:15px; line-height:1; padding:0 2px; transition:color .15s; }
+    .cfg-chip .chip-del:hover { color:var(--red); }
+    .cfg-add-row { display:flex; gap:8px; }
+    .cfg-add-row input { flex:1; }
   </style>
 </head>
 <body>
@@ -241,6 +249,8 @@
     <div class="divider"></div>
     <button onclick="showPage('inventario')">📋 &nbsp;Inventario</button>
     <button onclick="showPage('tendencias')">📊 &nbsp;Tendencias</button>
+    <div class="divider"></div>
+    <button onclick="showPage('settings')">⚙️ &nbsp;Configuración</button>
   </nav>
 
   <main>
@@ -314,10 +324,14 @@
             </select>
           </div>
         </div>
-        <div class="grid-3 mt-16">
+        <div class="grid-4 mt-16">
           <div class="field">
             <label>Cliente</label>
             <input type="text" id="n-cliente" placeholder="Nombre del cliente (opcional)" />
+          </div>
+          <div class="field">
+            <label>Vendedora</label>
+            <select id="n-vendedora"></select>
           </div>
           <div class="field">
             <label>Estado</label>
@@ -490,7 +504,9 @@
         </select>
         <select id="f-area" onchange="renderInventario()">
           <option value="">Todas las áreas</option>
-          <option>Hera Haus</option><option>B2B</option>
+        </select>
+        <select id="f-vendedora" onchange="renderInventario()">
+          <option value="">Todas las vendedoras</option>
         </select>
       </div>
 
@@ -522,6 +538,37 @@
       </div>
     </div>
 
+    <!-- SETTINGS -->
+    <div id="page-settings" class="page">
+      <h2>Configuración</h2>
+
+      <div class="card">
+        <h3>👤 Vendedoras</h3>
+        <div class="cfg-chips" id="cfg-vendedoras"></div>
+        <div class="cfg-add-row">
+          <input type="text" id="new-vendedora" placeholder="Nombre de la vendedora…" onkeydown="if(event.key==='Enter')agregarItem('vendedoras','new-vendedora')" />
+          <button class="btn btn-outline btn-sm" onclick="agregarItem('vendedoras','new-vendedora')">+ Agregar</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>🏢 Áreas de Negocio</h3>
+        <div class="cfg-chips" id="cfg-areas"></div>
+        <div class="cfg-add-row">
+          <input type="text" id="new-area" placeholder="Nombre del área…" onkeydown="if(event.key==='Enter')agregarItem('areas','new-area')" />
+          <button class="btn btn-outline btn-sm" onclick="agregarItem('areas','new-area')">+ Agregar</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>🚚 Proveedores / Canales</h3>
+        <div class="cfg-chips" id="cfg-canales"></div>
+        <div class="cfg-add-row">
+          <input type="text" id="new-canal" placeholder="Nombre del proveedor…" onkeydown="if(event.key==='Enter')agregarItem('canales','new-canal')" />
+          <button class="btn btn-outline btn-sm" onclick="agregarItem('canales','new-canal')">+ Agregar</button>
+        </div>
+      </div>
+    </div>
 
   </main>
 </div>
@@ -544,6 +591,7 @@
 
 <script>
 const STORE_KEY  = 'inventario_piedras_v2';
+const CFG_KEY    = 'piedras_cfg_v1';
 const SB_URL     = 'https://udtkthoxqejmlecaiwdd.supabase.co';
 const SB_KEY     = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVkdGt0aG94cWVqbWxlY2Fpd2RkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkyMDc0NzMsImV4cCI6MjA5NDc4MzQ3M30.6Zt3-FSwKFb-mgJkNDDG73dOTziecoMZXTs6cKP4FmA';
 let _data        = { piedras: [] };
@@ -599,6 +647,43 @@ async function syncEliminar(codigo) {
   catch(e) { console.warn('Sync eliminar:', e.message); }
 }
 
+// ── CONFIG ────────────────────────────────────────────────────────────────────
+const CFG_DEFAULT = {
+  vendedoras: ['Ines','Regina','Gaby','Polet','Mica','Jaque','Paola','Karen'],
+  areas:      ['Hera Haus','B2B'],
+  canales:    ['NIVODA','UNI','Directo','Otro'],
+};
+function loadCfg() {
+  try { const c = JSON.parse(localStorage.getItem(CFG_KEY)); return c || { ...CFG_DEFAULT }; }
+  catch { return { ...CFG_DEFAULT }; }
+}
+function saveCfg(c) { localStorage.setItem(CFG_KEY, JSON.stringify(c)); }
+
+function initFormDropdowns() {
+  const cfg = loadCfg();
+  const mkOpts = (arr, blank) => (blank ? `<option value="">${blank}</option>` : '') + arr.map(v=>`<option>${v}</option>`).join('');
+
+  // Formulario nueva piedra
+  const sv = document.getElementById('n-vendedora');
+  if (sv) sv.innerHTML = `<option value="">— Sin asignar —</option>` + cfg.vendedoras.map(v=>`<option>${v}</option>`).join('');
+
+  const sc = document.getElementById('n-canal');
+  if (sc) sc.innerHTML = cfg.canales.map(v=>`<option>${v}</option>`).join('');
+
+  const sa = document.getElementById('n-area');
+  if (sa) sa.innerHTML = cfg.areas.map(v=>`<option>${v}</option>`).join('');
+
+  // Filtros de inventario
+  const fa = document.getElementById('f-area');
+  if (fa) fa.innerHTML = mkOpts(cfg.areas, 'Todas las áreas');
+
+  const fv = document.getElementById('f-vendedora');
+  if (fv) fv.innerHTML = mkOpts(cfg.vendedoras, 'Todas las vendedoras');
+
+  const fc = document.getElementById('f-canal');
+  if (fc) fc.innerHTML = mkOpts(cfg.canales, 'Todos los proveedores');
+}
+
 // ── HELPERS ───────────────────────────────────────────────────────────────────
 function today() { return new Date().toISOString().slice(0,10); }
 function fmtNum(n,d=2) { return n!=null ? Number(n).toFixed(d) : '—'; }
@@ -649,11 +734,12 @@ function showPage(id) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
   document.getElementById('page-'+id).classList.add('active');
-  const idx = { dashboard:0, nueva:1, inventario:2, tendencias:3 };
+  const idx = { dashboard:0, nueva:1, inventario:2, tendencias:3, settings:5 };
   document.querySelectorAll('nav button')[idx[id]]?.classList.add('active');
-  if (id==='dashboard')   renderDashboard();
-  if (id==='inventario')  renderInventario();
-  if (id==='tendencias')  renderTendencias();
+  if (id==='dashboard')  renderDashboard();
+  if (id==='inventario') renderInventario();
+  if (id==='tendencias') renderTendencias();
+  if (id==='settings')   renderSettings();
 }
 
 // ── TIPO TOGGLE ───────────────────────────────────────────────────────────────
@@ -707,10 +793,11 @@ function limpiarEstados() {
 
 function renderInventario() {
   const all    = loadData().piedras;
-  const buscar = (document.getElementById('f-buscar')?.value||'').toLowerCase();
-  const tipo   = document.getElementById('f-tipo')?.value||'';
-  const canal  = document.getElementById('f-canal')?.value||'';
-  const area   = document.getElementById('f-area')?.value||'';
+  const buscar    = (document.getElementById('f-buscar')?.value||'').toLowerCase();
+  const tipo      = document.getElementById('f-tipo')?.value||'';
+  const canal     = document.getElementById('f-canal')?.value||'';
+  const area      = document.getElementById('f-area')?.value||'';
+  const vendedora = document.getElementById('f-vendedora')?.value||'';
 
   // Render status pills multi-select
   const tabsEl = document.getElementById('status-tabs');
@@ -734,8 +821,9 @@ function renderInventario() {
   if (_filtroEstados.size) ps = ps.filter(p => _filtroEstados.has(p.estado));
   if (tipo==='melee')      ps = ps.filter(p => p.tipo==='melee');
   if (tipo==='individual') ps = ps.filter(p => p.tipo!=='melee');
-  if (canal)  ps = ps.filter(p => p.canal===canal);
-  if (area)   ps = ps.filter(p => p.area_negocio===area);
+  if (canal)     ps = ps.filter(p => p.canal===canal);
+  if (area)      ps = ps.filter(p => p.area_negocio===area);
+  if (vendedora) ps = ps.filter(p => p.vendedora===vendedora);
   if (buscar) ps = ps.filter(p =>
     (p.codigo||'').toLowerCase().includes(buscar) ||
     (p.forma||p.m_corte||'').toLowerCase().includes(buscar) ||
@@ -763,7 +851,7 @@ function piedraItemHtml(p) {
     <div class="piedra-item">
       <div class="meta" onclick="openDetalle('${p.codigo}')">
         <span class="code">${p.codigo} ${p.tipo==='melee' ? '<span class="badge badge-melee" style="font-size:10px;padding:1px 6px">MELEE</span>' : ''}</span>
-        <span class="sub">${p.fecha_llegada} · ${p.canal} · ${p.area_negocio}${p.cliente?' · '+p.cliente:''}</span>
+        <span class="sub">${p.fecha_llegada} · ${p.canal} · ${p.area_negocio}${p.vendedora?' · '+p.vendedora:''}${p.cliente?' · '+p.cliente:''}</span>
         <span class="sub" style="color:var(--gold-lt)">${info}</span>
       </div>
       <div class="right">
@@ -820,6 +908,7 @@ function registrarPiedra() {
     canal:        document.getElementById('n-canal').value,
     area_negocio,
     cliente,
+    vendedora:    document.getElementById('n-vendedora').value,
     estado:       document.getElementById('n-estado').value,
     numero_guia:  document.getElementById('n-numguia').value.trim(),
     notas:        document.getElementById('n-notas').value.trim(),
@@ -890,7 +979,7 @@ function registrarPiedra() {
 
 function limpiarNueva() {
   ['n-quilates','n-color','n-claridad','n-corte','n-forma','n-largo','n-ancho',
-   'n-prof','n-lab','n-numcert','n-notas','n-cliente','n-numguia','m-corte','m-tamano','m-cantidad','m-peso']
+   'n-prof','n-lab','n-numcert','n-notas','n-cliente','n-numguia','n-vendedora','m-corte','m-tamano','m-cantidad','m-peso']
     .forEach(id => { const el=document.getElementById(id); if(el) el.value=''; });
   document.getElementById('n-fecha').value   = today();
   document.getElementById('n-canal').value   = 'NIVODA';
@@ -921,7 +1010,8 @@ function editarPiedra(codigo) {
   document.getElementById('n-fecha').value   = p.fecha_llegada || today();
   document.getElementById('n-canal').value   = p.canal || 'NIVODA';
   document.getElementById('n-area').value    = p.area_negocio || 'Hera Haus';
-  document.getElementById('n-cliente').value = p.cliente || '';
+  document.getElementById('n-cliente').value   = p.cliente   || '';
+  document.getElementById('n-vendedora').value = p.vendedora || '';
   document.getElementById('n-estado').value   = p.estado || 'pedido';
   document.getElementById('n-numguia').value  = p.numero_guia || '';
   document.getElementById('n-notas').value    = p.notas || '';
@@ -1000,6 +1090,7 @@ function openDetalle(codigo) {
     <div class="result-row"><span class="rl">Llegada</span><span class="rv">${p.fecha_llegada}</span></div>
     <div class="result-row"><span class="rl">Canal</span><span class="rv">${p.canal}</span></div>
     <div class="result-row"><span class="rl">Área</span><span class="rv">${p.area_negocio}</span></div>
+    ${p.vendedora?`<div class="result-row"><span class="rl">Vendedora</span><span class="rv">${p.vendedora}</span></div>`:''}
     ${p.cliente?`<div class="result-row"><span class="rl">Cliente</span><span class="rv">${p.cliente}</span></div>`:''}
     ${p.numero_guia?`<div class="result-row"><span class="rl">Núm. de guía</span><span class="rv gold">${p.numero_guia}</span></div>`:''}
     <hr class="sep">
@@ -1240,9 +1331,45 @@ function renderTendencias() {
   });
 }
 
+// ── SETTINGS ─────────────────────────────────────────────────────────────────
+function renderSettings() {
+  const cfg = loadCfg();
+  const mkChips = (tipo, arr) => arr.length
+    ? arr.map((v,i) => `<div class="cfg-chip"><span>${v}</span><button class="chip-del" onclick="eliminarItem('${tipo}',${i})">×</button></div>`).join('')
+    : `<p style="color:var(--muted);font-size:13px">Sin elementos. Agrega uno abajo.</p>`;
+  document.getElementById('cfg-vendedoras').innerHTML = mkChips('vendedoras', cfg.vendedoras);
+  document.getElementById('cfg-areas').innerHTML      = mkChips('areas',      cfg.areas);
+  document.getElementById('cfg-canales').innerHTML    = mkChips('canales',    cfg.canales);
+}
+
+function agregarItem(tipo, inputId) {
+  const el  = document.getElementById(inputId);
+  const val = el.value.trim();
+  if (!val) return;
+  const cfg = loadCfg();
+  if (!cfg[tipo].includes(val)) {
+    cfg[tipo].push(val);
+    saveCfg(cfg);
+    initFormDropdowns();
+    renderSettings();
+    toast(`"${val}" agregado ✓`);
+  }
+  el.value = '';
+}
+
+function eliminarItem(tipo, idx) {
+  const cfg = loadCfg();
+  cfg[tipo].splice(idx, 1);
+  saveCfg(cfg);
+  initFormDropdowns();
+  renderSettings();
+  toast('Eliminado ✓');
+}
+
 // ── INIT ──────────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('n-fecha').value = today();
+  initFormDropdowns();
   initData();
 });
 document.addEventListener('click', () => {
