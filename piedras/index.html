@@ -1,0 +1,1199 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Inventario de Piedras</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --gold:#c4a882; --gold-lt:#d9c4a6; --gold-dk:#9a7d60;
+      --bg:#0e0c0a; --surface:#1a1612; --card:#221d15; --border:#302820;
+      --text:#ede8e0; --muted:#8a8070; --green:#6aaf82; --red:#e05c5c;
+      --blue:#6ab4f0; --purple:#c084f0; --orange:#f0944a;
+      --teal:#4ad4c8; --rose:#f07aaa; --gray:#909090; --yellow:#d4c24a;
+    }
+    body { font-family:'Segoe UI',system-ui,sans-serif; background:var(--bg); color:var(--text); min-height:100vh; }
+
+    header { background:linear-gradient(135deg,#16120a 0%,#241c10 50%,#16120a 100%); border-bottom:1px solid var(--gold-dk); padding:14px 32px; display:flex; align-items:center; gap:16px; }
+    .logo-wrap { width:48px; height:48px; background:rgba(196,168,130,.08); border:1px solid rgba(196,168,130,.2); border-radius:8px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+    header h1 { font-size:20px; font-weight:600; color:var(--gold-lt); letter-spacing:.5px; }
+    header p  { font-size:12px; color:var(--muted); margin-top:2px; }
+
+    .app { display:grid; grid-template-columns:220px 1fr; min-height:calc(100vh - 65px); }
+    nav { background:var(--surface); border-right:1px solid var(--border); padding:24px 0; }
+    nav button { width:100%; text-align:left; background:none; border:none; color:var(--muted); padding:12px 24px; cursor:pointer; font-size:14px; display:flex; align-items:center; gap:10px; transition:all .15s; }
+    nav button:hover  { color:var(--text); background:var(--card); }
+    nav button.active { color:var(--gold-lt); background:rgba(201,168,76,.08); border-right:3px solid var(--gold); }
+    nav .divider { height:1px; background:var(--border); margin:8px 16px; }
+
+    main { padding:32px; overflow-y:auto; }
+    .page { display:none; }
+    .page.active { display:block; }
+    h2 { font-size:20px; font-weight:600; color:var(--gold-lt); margin-bottom:24px; }
+    h3 { font-size:13px; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:.8px; margin-bottom:16px; }
+
+    .card { background:var(--card); border:1px solid var(--border); border-radius:10px; padding:24px; margin-bottom:20px; }
+    .grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+    .grid-3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:16px; }
+    .grid-4 { display:grid; grid-template-columns:repeat(4,1fr); gap:16px; }
+
+    label { display:block; font-size:12px; color:var(--muted); margin-bottom:6px; font-weight:500; }
+    input,select,textarea { width:100%; background:var(--surface); border:1px solid var(--border); border-radius:6px; color:var(--text); padding:9px 12px; font-size:14px; outline:none; transition:border-color .15s; font-family:inherit; }
+    input:focus,select:focus,textarea:focus { border-color:var(--gold-dk); }
+    select option { background:var(--surface); }
+    textarea { resize:vertical; min-height:72px; }
+    .field { margin-bottom:0; }
+    .mt-8  { margin-top:8px; }
+    .mt-16 { margin-top:16px; }
+    .sep { border:none; border-top:1px solid var(--border); margin:20px 0; }
+
+    .btn { padding:10px 20px; border-radius:6px; border:none; font-size:14px; font-weight:600; cursor:pointer; transition:all .15s; }
+    .btn-gold { background:linear-gradient(135deg,var(--gold-dk),var(--gold)); color:#111; }
+    .btn-gold:hover { filter:brightness(1.1); }
+    .btn-outline { background:transparent; border:1px solid var(--border); color:var(--muted); }
+    .btn-outline:hover { border-color:var(--gold-dk); color:var(--text); }
+    .btn-blue { background:rgba(106,180,240,.15); border:1px solid var(--blue); color:var(--blue); }
+    .btn-blue:hover { background:rgba(106,180,240,.25); }
+    .btn-sm { padding:6px 14px; font-size:12px; }
+    .actions { display:flex; gap:10px; margin-top:20px; flex-wrap:wrap; }
+
+    /* Tipo toggle */
+    .tipo-toggle { display:flex; gap:8px; margin-bottom:24px; }
+    .tipo-btn { padding:8px 20px; border-radius:8px; border:1px solid var(--border); background:none; color:var(--muted); font-size:14px; font-weight:600; cursor:pointer; transition:all .15s; }
+    .tipo-btn.active { background:rgba(196,168,130,.15); border-color:var(--gold); color:var(--gold-lt); }
+
+    /* Stats */
+    .stats-strip { display:grid; grid-template-columns:repeat(auto-fill,minmax(130px,1fr)); gap:12px; margin-bottom:28px; }
+    .stat-card { background:var(--card); border:1px solid var(--border); border-radius:8px; padding:16px; }
+    .stat-card .s-label { font-size:10px; color:var(--muted); text-transform:uppercase; letter-spacing:.8px; }
+    .stat-card .s-value { font-size:22px; font-weight:700; color:var(--gold-lt); margin-top:6px; }
+    .stat-card .s-sub   { font-size:11px; color:var(--muted); margin-top:4px; }
+
+    /* Badges */
+    .badge { display:inline-block; padding:3px 9px; border-radius:20px; font-size:11px; font-weight:600; white-space:nowrap; }
+    .badge-pedido    { background:rgba(106,180,240,.15); color:var(--blue); }
+    .badge-pagar     { background:rgba(212,194,74,.15);  color:var(--yellow); }
+    .badge-pagado    { background:rgba(196,168,130,.15); color:var(--gold); }
+    .badge-camino    { background:rgba(192,132,240,.15); color:var(--purple); }
+    .badge-aduanas   { background:rgba(240,148,74,.15);  color:var(--orange); }
+    .badge-tienda    { background:rgba(106,175,130,.15); color:var(--green); }
+    .badge-enviar    { background:rgba(74,212,200,.15);  color:var(--teal); }
+    .badge-recoge    { background:rgba(240,122,170,.15); color:var(--rose); }
+    .badge-entregado { background:rgba(144,144,144,.15); color:var(--gray); }
+    .badge-melee     { background:rgba(106,180,240,.08); color:var(--blue); border:1px solid rgba(106,180,240,.2); }
+
+    /* State bar */
+    .state-bar { display:flex; gap:6px; flex-wrap:wrap; margin:10px 0; }
+    .state-btn { padding:5px 13px; border-radius:20px; border:1px solid var(--border); background:none; color:var(--muted); font-size:12px; font-weight:600; cursor:pointer; transition:all .15s; }
+    .state-btn:hover { border-color:var(--gold-dk); color:var(--text); }
+    .s-pedido    { background:rgba(106,180,240,.2); border-color:var(--blue);   color:var(--blue); }
+    .s-pagar     { background:rgba(212,194,74,.2);  border-color:var(--yellow); color:var(--yellow); }
+    .s-pagado    { background:rgba(196,168,130,.2); border-color:var(--gold);   color:var(--gold); }
+    .s-camino    { background:rgba(192,132,240,.2); border-color:var(--purple); color:var(--purple); }
+    .s-aduanas   { background:rgba(240,148,74,.2);  border-color:var(--orange); color:var(--orange); }
+    .s-tienda    { background:rgba(106,175,130,.2); border-color:var(--green);  color:var(--green); }
+    .s-enviar    { background:rgba(74,212,200,.2);  border-color:var(--teal);   color:var(--teal); }
+    .s-recoge    { background:rgba(240,122,170,.2); border-color:var(--rose);   color:var(--rose); }
+    .s-entregado { background:rgba(144,144,144,.2); border-color:var(--gray);   color:var(--gray); }
+
+    /* Status popover */
+    .spop-wrap { position:relative; display:inline-block; }
+    .spop-wrap > span { cursor:pointer; }
+    .spop-wrap > span:hover { opacity:.85; }
+    .spop { position:absolute; right:0; top:calc(100% + 6px); background:var(--card); border:1px solid var(--border); border-radius:10px; padding:5px; z-index:60; min-width:170px; box-shadow:0 10px 32px rgba(0,0,0,.6); display:none; }
+    .spop.open { display:block; }
+    .spop button { width:100%; text-align:left; padding:7px 10px; background:none; border:none; cursor:pointer; border-radius:6px; font-size:12px; color:var(--muted); display:flex; align-items:center; gap:8px; white-space:nowrap; transition:background .1s; }
+    .spop button:hover { background:var(--surface); color:var(--text); }
+    .spop button.cur { font-weight:700; }
+    .spop-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+
+    /* Piedra list */
+    .piedra-list { display:flex; flex-direction:column; gap:10px; }
+    .piedra-item { background:var(--card); border:1px solid var(--border); border-radius:8px; padding:16px 20px; display:flex; align-items:center; justify-content:space-between; transition:border-color .15s; }
+    .piedra-item:hover { border-color:var(--gold-dk); }
+    .piedra-item .meta { display:flex; flex-direction:column; gap:4px; cursor:pointer; flex:1; min-width:0; }
+    .piedra-item .code { font-weight:700; color:var(--gold-lt); font-size:15px; }
+    .piedra-item .sub  { font-size:12px; color:var(--muted); }
+    .piedra-item .right { display:flex; align-items:center; gap:10px; flex-shrink:0; margin-left:12px; }
+
+    .btn-icon { background:none; border:1px solid transparent; border-radius:6px; color:var(--muted); cursor:pointer; padding:5px 8px; font-size:15px; line-height:1; transition:all .15s; }
+    .btn-icon:hover       { color:var(--red);  border-color:var(--red);  background:rgba(224,92,92,.08); }
+    .btn-icon.edit:hover  { color:var(--blue); border-color:var(--blue); background:rgba(106,180,240,.08); }
+
+    /* Search bar */
+    .search-wrap { position:relative; margin-bottom:14px; }
+    .search-wrap input { padding:11px 16px 11px 42px; font-size:15px; border-radius:8px; width:100%; }
+    .search-wrap .search-icon { position:absolute; left:14px; top:50%; transform:translateY(-50%); font-size:16px; pointer-events:none; }
+    .search-wrap .clear-btn { position:absolute; right:12px; top:50%; transform:translateY(-50%); background:none; border:none; color:var(--muted); cursor:pointer; font-size:16px; display:none; }
+    .search-wrap input:not(:placeholder-shown) ~ .clear-btn { display:block; }
+
+    /* Status multi-select filter */
+    .status-filter { margin-bottom:14px; }
+    .status-filter-label { font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:.8px; margin-bottom:8px; display:flex; align-items:center; gap:8px; }
+    .status-filter-label .sel-count { background:var(--gold-dk); color:#111; border-radius:10px; padding:1px 7px; font-size:10px; font-weight:700; display:none; }
+    .status-filter-label .sel-count.show { display:inline-block; }
+    .status-filter-label .clear-sel { color:var(--gold-dk); cursor:pointer; font-size:10px; text-decoration:underline; display:none; }
+    .status-filter-label .clear-sel.show { display:inline; }
+    .stabs { display:flex; gap:6px; flex-wrap:wrap; }
+    .stab { padding:6px 13px; border-radius:20px; border:1px solid var(--border); background:none; color:var(--muted); font-size:12px; font-weight:600; cursor:pointer; transition:all .15s; white-space:nowrap; user-select:none; }
+    .stab:hover { border-color:var(--gold-dk); color:var(--text); }
+    .stab .cnt { display:inline-block; background:rgba(255,255,255,.1); border-radius:10px; padding:1px 6px; margin-left:4px; font-size:10px; }
+
+    /* Filter bar */
+    .filter-bar { display:flex; gap:10px; flex-wrap:wrap; margin-bottom:20px; align-items:center; }
+    .filter-bar input  { width:auto; min-width:200px; padding:7px 12px; font-size:13px; }
+    .filter-bar select { width:auto; padding:7px 12px; font-size:13px; }
+
+    /* Upload zone */
+    .upload-zone { border:2px dashed var(--border); border-radius:8px; padding:20px; text-align:center; cursor:pointer; transition:border-color .15s; position:relative; }
+    .upload-zone:hover,.upload-zone.drag { border-color:var(--gold-dk); }
+    .upload-zone input[type=file] { position:absolute; inset:0; opacity:0; cursor:pointer; width:100%; height:100%; }
+    .upload-zone .icon { font-size:24px; margin-bottom:6px; }
+    .upload-zone p { font-size:12px; color:var(--muted); }
+    .upload-zone .file-name { font-size:12px; color:var(--gold-lt); font-weight:600; margin-top:6px; }
+
+    /* Modal */
+    .overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,.75); z-index:100; align-items:center; justify-content:center; }
+    .overlay.open { display:flex; }
+    .modal { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:28px; width:680px; max-width:95vw; max-height:90vh; overflow-y:auto; }
+    .modal-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:24px; }
+    .modal-header h2 { margin:0; font-size:17px; }
+    .close-btn { background:none; border:none; color:var(--muted); font-size:22px; cursor:pointer; }
+
+    .result-row { display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid rgba(255,255,255,.05); font-size:14px; }
+    .result-row:last-child { border-bottom:none; }
+    .result-row .rl { color:var(--muted); }
+    .result-row .rv { font-weight:600; }
+    .rv.gold { color:var(--gold-lt); }
+    .rv.green { color:var(--green); }
+
+    /* 4Cs cards */
+    .cs-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin:12px 0; }
+    .cs-card { background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:12px; text-align:center; }
+    .cs-card .cs-label { font-size:10px; color:var(--muted); text-transform:uppercase; letter-spacing:.8px; }
+    .cs-card .cs-value { font-size:18px; font-weight:700; color:var(--gold-lt); margin-top:4px; }
+    .cs-card .cs-sub   { font-size:10px; color:var(--muted); margin-top:2px; }
+
+    /* Certificate viewer */
+    .cert-viewer { margin-top:12px; border:1px solid var(--border); border-radius:8px; overflow:hidden; }
+    .cert-viewer img    { width:100%; display:block; }
+    .cert-viewer iframe { width:100%; height:500px; border:none; display:block; }
+
+    .forma-badge { display:inline-block; padding:2px 10px; border-radius:20px; font-size:12px; background:rgba(196,168,130,.1); color:var(--gold-lt); border:1px solid rgba(196,168,130,.2); }
+
+    /* Toast */
+    #toast { position:fixed; bottom:24px; right:24px; background:var(--green); color:#fff; padding:12px 20px; border-radius:8px; font-size:14px; font-weight:600; transform:translateY(80px); opacity:0; transition:all .3s; z-index:200; max-width:340px; }
+    #toast.show { transform:translateY(0); opacity:1; }
+
+    .empty { text-align:center; padding:60px 20px; color:var(--muted); }
+    .empty .big { font-size:48px; margin-bottom:12px; }
+    .err-box { display:none; background:rgba(224,92,92,.15); border:1px solid var(--red); border-radius:6px; padding:12px 16px; margin-bottom:4px; color:var(--red); font-size:14px; }
+
+    /* Historial timeline */
+    .timeline { display:flex; flex-direction:column; gap:0; margin-top:4px; }
+    .tl-row { display:flex; align-items:center; gap:10px; padding:7px 0; border-bottom:1px solid rgba(255,255,255,.04); font-size:13px; }
+    .tl-row:last-child { border-bottom:none; }
+    .tl-dot { width:10px; height:10px; border-radius:50%; flex-shrink:0; }
+    .tl-label { color:var(--text); font-weight:600; min-width:140px; }
+    .tl-dates { color:var(--muted); font-size:11px; flex:1; }
+    .tl-dias { font-weight:700; font-size:13px; min-width:70px; text-align:right; }
+    .tl-current { opacity:.6; font-style:italic; }
+
+    /* Tendencias */
+    .tend-area { background:var(--card); border:1px solid var(--border); border-radius:10px; padding:20px; }
+    .tend-area h3 { margin-bottom:16px; }
+    .tend-stat { display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid rgba(255,255,255,.04); font-size:13px; }
+    .tend-stat:last-child { border-bottom:none; }
+    .tend-stat .tsl { color:var(--muted); font-size:12px; }
+    .tend-stat .tsv { font-weight:700; color:var(--gold-lt); }
+    .tend-stat .tsn { font-size:11px; color:var(--muted); margin-left:4px; }
+    .bar-row { display:flex; align-items:center; gap:8px; margin:5px 0; font-size:12px; }
+    .bar-wrap { flex:1; background:rgba(255,255,255,.06); border-radius:4px; height:8px; overflow:hidden; }
+    .bar-fill { height:100%; border-radius:4px; transition:width .3s; }
+    .bar-label { min-width:90px; color:var(--muted); }
+    .bar-val { min-width:40px; text-align:right; color:var(--text); font-weight:600; }
+    .tiempo-row { display:flex; align-items:center; gap:10px; padding:8px 0; border-bottom:1px solid rgba(255,255,255,.04); font-size:13px; }
+    .tiempo-row:last-child { border-bottom:none; }
+    .tiempo-row .trl { min-width:140px; color:var(--muted); font-size:12px; }
+    .tiempo-hh  { min-width:100px; }
+    .tiempo-b2b { min-width:100px; }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo-wrap">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 72 60" width="38" height="32">
+      <text x="1" y="52" font-family="'Times New Roman',Georgia,serif" font-size="58" font-weight="400" fill="#c4a882" letter-spacing="-10">HH</text>
+    </svg>
+  </div>
+  <div style="flex:1"><h1>Inventario de Piedras</h1><p>Control de stock · Diamantes</p></div>
+  <a href="../" style="display:flex;align-items:center;gap:6px;color:var(--muted);font-size:13px;text-decoration:none;padding:6px 12px;border:1px solid var(--border);border-radius:6px;transition:all .15s" onmouseover="this.style.color='var(--gold-lt)';this.style.borderColor='var(--gold-dk)'" onmouseout="this.style.color='var(--muted)';this.style.borderColor='var(--border)'">
+    ← Inicio
+  </a>
+</header>
+
+<div class="app">
+  <nav>
+    <button class="active" onclick="showPage('dashboard')">💎 &nbsp;Dashboard</button>
+    <button onclick="showPage('nueva')">➕ &nbsp;Nueva Piedra</button>
+    <div class="divider"></div>
+    <button onclick="showPage('inventario')">📋 &nbsp;Inventario</button>
+    <button onclick="showPage('tendencias')">📊 &nbsp;Tendencias</button>
+  </nav>
+
+  <main>
+
+    <!-- DASHBOARD -->
+    <div id="page-dashboard" class="page active">
+      <h2>Dashboard</h2>
+      <div class="stats-strip" id="dash-stats"></div>
+      <div class="grid-2" style="margin-bottom:20px">
+        <div class="card"><h3>Por Canal</h3><div id="dash-canales"></div></div>
+        <div class="card"><h3>Por Área de Negocio</h3><div id="dash-areas"></div></div>
+      </div>
+      <h3>Últimas Llegadas</h3>
+      <div id="dash-recientes" class="piedra-list"></div>
+    </div>
+
+    <!-- NUEVA PIEDRA -->
+    <div id="page-nueva" class="page">
+      <h2>Registrar Nueva Piedra</h2>
+
+      <!-- Tipo toggle -->
+      <div class="tipo-toggle">
+        <button class="tipo-btn active" id="btn-individual" onclick="setTipo('individual')">💎 Diamante Individual</button>
+        <button class="tipo-btn" id="btn-melee" onclick="setTipo('melee')">✦ Melee</button>
+      </div>
+
+      <!-- Certificado primero para auto-llenado -->
+      <div class="card" id="card-cert">
+        <h3>Certificado / Foto de la Piedra</h3>
+        <div class="grid-2">
+          <div>
+            <label>Certificado (PDF o imagen)</label>
+            <div class="upload-zone" id="zone-cert" ondragover="dragOver(event,'zone-cert')" ondragleave="dragLeave('zone-cert')" ondrop="dropFile(event,'cert')">
+              <input type="file" id="file-cert" accept="image/*,.pdf" onchange="handleFile('cert')" />
+              <div class="icon">📄</div>
+              <p>Arrastra o haz clic<br><small>JPG, PNG, PDF</small></p>
+              <div class="file-name" id="file-cert-name"></div>
+            </div>
+          </div>
+          <div>
+            <label>Foto de la piedra</label>
+            <div class="upload-zone" id="zone-foto" ondragover="dragOver(event,'zone-foto')" ondragleave="dragLeave('zone-foto')" ondrop="dropFile(event,'foto')">
+              <input type="file" id="file-foto" accept="image/*" onchange="handleFile('foto')" />
+              <div class="icon">💎</div>
+              <p>Arrastra o haz clic<br><small>JPG, PNG</small></p>
+              <div class="file-name" id="file-foto-name"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Identificación (ambos tipos) -->
+      <div class="card">
+        <h3>Identificación</h3>
+        <div class="grid-3">
+          <div class="field">
+            <label>Fecha de llegada</label>
+            <input type="date" id="n-fecha" />
+          </div>
+          <div class="field">
+            <label>Canal</label>
+            <select id="n-canal">
+              <option>NIVODA</option><option>UNI</option>
+              <option>Directo</option><option>Otro</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Área de negocio</label>
+            <select id="n-area">
+              <option>Hera Haus</option><option>B2B</option>
+            </select>
+          </div>
+        </div>
+        <div class="grid-3 mt-16">
+          <div class="field">
+            <label>Cliente</label>
+            <input type="text" id="n-cliente" placeholder="Nombre del cliente (opcional)" />
+          </div>
+          <div class="field">
+            <label>Estado</label>
+            <select id="n-estado">
+              <option value="pedido">Pedido</option>
+              <option value="pagar">Por Pagar</option>
+              <option value="pagado">Pagado</option>
+              <option value="en_camino">En Camino</option>
+              <option value="aduanas">Aduanas</option>
+              <option value="en_tienda">En Tienda</option>
+              <option value="enviar">Por Enviar</option>
+              <option value="recoge_en_tienda">Recoge en Tienda</option>
+              <option value="entregado">Entregado</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Número de guía</label>
+            <input type="text" id="n-numguia" placeholder="Ej: 1Z999AA10123456784" />
+          </div>
+        </div>
+      </div>
+
+      <!-- Formulario INDIVIDUAL -->
+      <div id="form-individual">
+        <div class="card">
+          <h3>Las 4 Cs</h3>
+          <div class="grid-4">
+            <div class="field"><label>Quilates (ct)</label><input type="number" id="n-quilates" placeholder="1.00" min="0" step="0.01" /></div>
+            <div class="field">
+              <label>Color</label>
+              <select id="n-color">
+                <option value="">— —</option>
+                <option>D</option><option>E</option><option>F</option><option>G</option>
+                <option>H</option><option>I</option><option>J</option><option>K</option><option>L</option><option>M</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>Claridad</label>
+              <select id="n-claridad">
+                <option value="">— —</option>
+                <option>FL</option><option>IF</option><option>VVS1</option><option>VVS2</option>
+                <option>VS1</option><option>VS2</option><option>SI1</option><option>SI2</option>
+                <option>I1</option><option>I2</option><option>I3</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>Corte</label>
+              <select id="n-corte">
+                <option value="">— —</option>
+                <option>Excellent</option><option>Very Good</option><option>Good</option><option>Fair</option><option>Poor</option>
+              </select>
+            </div>
+          </div>
+          <div class="field mt-16">
+            <label>Forma</label>
+            <select id="n-forma">
+              <option value="">— —</option>
+              <option>Round</option><option>Princess</option><option>Oval</option><option>Cushion</option>
+              <option>Emerald</option><option>Pear</option><option>Marquise</option><option>Heart</option>
+              <option>Radiant</option><option>Asscher</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3>Dimensiones (mm)</h3>
+          <div class="grid-3">
+            <div class="field"><label>Largo</label><input type="number" id="n-largo" placeholder="0.00" step="0.01" /></div>
+            <div class="field"><label>Ancho</label><input type="number" id="n-ancho" placeholder="0.00" step="0.01" /></div>
+            <div class="field"><label>Profundidad</label><input type="number" id="n-prof" placeholder="0.00" step="0.01" /></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3>Certificación</h3>
+          <div class="grid-3">
+            <div class="field">
+              <label>Laboratorio</label>
+              <select id="n-lab">
+                <option value="Sin certificado">Sin certificado</option>
+                <option value="GIA">GIA</option>
+                <option value="IGI">IGI</option>
+                <option value="Otro">Otro</option>
+              </select>
+            </div>
+            <div class="field" style="grid-column:span 2">
+              <label>Número de certificado</label>
+              <input type="text" id="n-numcert" placeholder="Ej: 2345678901" />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Formulario MELEE -->
+      <div id="form-melee" style="display:none">
+        <div class="card">
+          <h3>Especificaciones Melee</h3>
+          <div class="grid-3">
+            <div class="field">
+              <label>Corte</label>
+              <select id="m-corte">
+                <option value="">— —</option>
+                <option>Round</option><option>Princess</option><option>Baguette</option>
+                <option>Taper</option><option>Trillion</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>Tamaño</label>
+              <input type="text" id="m-tamano" placeholder="Ej: 1.5mm  ó  0.01-0.02ct" />
+            </div>
+            <div class="field">
+              <label>Origen</label>
+              <select id="m-origen">
+                <option value="Natural">Natural</option>
+                <option value="Lab Grown">Lab Grown</option>
+              </select>
+            </div>
+          </div>
+          <div class="grid-2 mt-16">
+            <div class="field"><label>Cantidad (piezas)</label><input type="number" id="m-cantidad" placeholder="0" min="1" step="1" /></div>
+            <div class="field"><label>Peso total (ct)</label><input type="number" id="m-peso" placeholder="0.00" step="0.01" /></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Notas (ambos) -->
+      <div class="card">
+        <h3>Notas</h3>
+        <textarea id="n-notas" placeholder="Observaciones adicionales..."></textarea>
+      </div>
+
+      <div class="err-box" id="nueva-error"></div>
+      <div class="actions">
+        <button class="btn btn-gold" onclick="registrarPiedra()">Guardar Piedra</button>
+        <button class="btn btn-outline" onclick="limpiarNueva()">Limpiar</button>
+      </div>
+    </div>
+
+    <!-- INVENTARIO -->
+    <div id="page-inventario" class="page">
+      <h2>Inventario</h2>
+
+      <!-- Search bar -->
+      <div class="search-wrap">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="f-buscar" placeholder="Buscar por cliente, código, forma, lab, guía…" oninput="renderInventario()" />
+        <button class="clear-btn" onclick="document.getElementById('f-buscar').value='';renderInventario()">✕</button>
+      </div>
+
+      <!-- Multi-select estatus -->
+      <div class="status-filter">
+        <div class="status-filter-label">
+          Filtrar por estado
+          <span class="sel-count" id="sel-count"></span>
+          <span class="clear-sel" id="clear-sel" onclick="limpiarEstados()">Limpiar</span>
+        </div>
+        <div class="stabs" id="status-tabs"></div>
+      </div>
+
+      <!-- Otros filtros -->
+      <div class="filter-bar">
+        <select id="f-tipo" onchange="renderInventario()">
+          <option value="">Individual + Melee</option>
+          <option value="individual">Solo Individual</option>
+          <option value="melee">Solo Melee</option>
+        </select>
+        <select id="f-canal" onchange="renderInventario()">
+          <option value="">Todos los canales</option>
+          <option>NIVODA</option><option>UNI</option><option>Directo</option><option>Otro</option>
+        </select>
+        <select id="f-area" onchange="renderInventario()">
+          <option value="">Todas las áreas</option>
+          <option>Hera Haus</option><option>B2B</option>
+        </select>
+      </div>
+
+      <div id="inv-list" class="piedra-list"></div>
+    </div>
+
+    <!-- TENDENCIAS -->
+    <div id="page-tendencias" class="page">
+      <h2>Tendencias</h2>
+
+      <!-- Tiempos por canal -->
+      <div class="card" style="margin-bottom:20px">
+        <h3>⏱ Tiempo promedio por estatus — comparación de proveedores</h3>
+        <div id="t-header" style="margin-bottom:6px"></div>
+        <div id="t-tiempos"></div>
+        <div id="t-total" style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border)"></div>
+      </div>
+
+      <!-- Tendencias por área -->
+      <div class="grid-2">
+        <div class="tend-area">
+          <h3 style="color:var(--gold-lt)">✦ Hera Haus</h3>
+          <div id="t-hh"></div>
+        </div>
+        <div class="tend-area">
+          <h3 style="color:var(--blue)">◆ B2B</h3>
+          <div id="t-b2b"></div>
+        </div>
+      </div>
+    </div>
+
+
+  </main>
+</div>
+
+<!-- MODAL DETALLE -->
+<div class="overlay" id="modal-overlay" onclick="closeModal(event)">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 id="modal-title">Detalle</h2>
+      <div style="display:flex;gap:8px;align-items:center">
+        <button id="modal-edit-btn" class="btn btn-outline btn-sm">✏️ Editar</button>
+        <button class="close-btn" onclick="closeModal()">×</button>
+      </div>
+    </div>
+    <div id="modal-body"></div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+const STORE_KEY  = 'inventario_piedras_v2';
+let _archivos    = {};
+let _tipoActual  = 'individual';
+let _editCodigo  = null;
+
+// ── DATA ──────────────────────────────────────────────────────────────────────
+function loadData() {
+  try { return JSON.parse(localStorage.getItem(STORE_KEY)) || { piedras:[] }; }
+  catch { return { piedras:[] }; }
+}
+function saveData(d) { localStorage.setItem(STORE_KEY, JSON.stringify(d)); }
+
+// ── HELPERS ───────────────────────────────────────────────────────────────────
+function today() { return new Date().toISOString().slice(0,10); }
+function fmtNum(n,d=2) { return n!=null ? Number(n).toFixed(d) : '—'; }
+function toast(msg, color='var(--green)') {
+  const el = document.getElementById('toast');
+  el.textContent = msg; el.style.background = color;
+  el.classList.add('show'); setTimeout(() => el.classList.remove('show'), 3000);
+}
+const ESTADOS = {
+  pedido:          ['badge-pedido',    'Pedido'],
+  pagar:           ['badge-pagar',     'Por Pagar'],
+  pagado:          ['badge-pagado',    'Pagado'],
+  en_camino:       ['badge-camino',    'En Camino'],
+  aduanas:         ['badge-aduanas',   'Aduanas'],
+  en_tienda:       ['badge-tienda',    'En Tienda'],
+  enviar:          ['badge-enviar',    'Por Enviar'],
+  recoge_en_tienda:['badge-recoge',    'Recoge en Tienda'],
+  entregado:       ['badge-entregado', 'Entregado'],
+};
+const STATE_CLS = {
+  pedido:'s-pedido', pagar:'s-pagar', pagado:'s-pagado', en_camino:'s-camino',
+  aduanas:'s-aduanas', en_tienda:'s-tienda',
+  enviar:'s-enviar', recoge_en_tienda:'s-recoge', entregado:'s-entregado',
+};
+const CANAL_COLORS = { NIVODA:'var(--gray)', UNI:'var(--blue)', Directo:'var(--gold)', Otro:'var(--teal)' };
+const ESTADO_COLORS = {
+  pedido:'var(--blue)', pagar:'var(--yellow)', pagado:'var(--gold)',
+  en_camino:'var(--purple)', aduanas:'var(--orange)', en_tienda:'var(--green)',
+  enviar:'var(--teal)', recoge_en_tienda:'var(--rose)', entregado:'var(--gray)',
+};
+function renderBadge(estado) {
+  const [cls, lbl] = ESTADOS[estado] || ['badge-pedido','Pedido'];
+  return `<span class="badge ${cls}">${lbl}</span>`;
+}
+function nextCodigo(cliente, area, excluir = null) {
+  const dept  = area === 'Hera Haus' ? 'HH' : 'B2B';
+  const nombre = (cliente || 'Sin nombre').trim();
+  const base   = `${nombre} - ${dept}`;
+  const todos  = loadData().piedras.filter(p => p.codigo !== excluir).map(p => p.codigo);
+  if (!todos.includes(base)) return base;
+  let i = 2;
+  while (todos.includes(`${base} - ${i}`)) i++;
+  return `${base} - ${i}`;
+}
+
+// ── NAV ───────────────────────────────────────────────────────────────────────
+function showPage(id) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+  document.getElementById('page-'+id).classList.add('active');
+  const idx = { dashboard:0, nueva:1, inventario:2, tendencias:3 };
+  document.querySelectorAll('nav button')[idx[id]]?.classList.add('active');
+  if (id==='dashboard')   renderDashboard();
+  if (id==='inventario')  renderInventario();
+  if (id==='tendencias')  renderTendencias();
+}
+
+// ── TIPO TOGGLE ───────────────────────────────────────────────────────────────
+function setTipo(tipo) {
+  _tipoActual = tipo;
+  document.getElementById('btn-individual').classList.toggle('active', tipo==='individual');
+  document.getElementById('btn-melee').classList.toggle('active', tipo==='melee');
+  document.getElementById('form-individual').style.display = tipo==='individual' ? 'block' : 'none';
+  document.getElementById('form-melee').style.display      = tipo==='melee' ? 'block' : 'none';
+  document.getElementById('card-cert').style.display       = tipo==='individual' ? 'block' : 'none';
+}
+
+// ── DASHBOARD ─────────────────────────────────────────────────────────────────
+function renderDashboard() {
+  const ps = loadData().piedras;
+  const byEstado = k => ps.filter(p => p.estado === k).length;
+
+  document.getElementById('dash-stats').innerHTML =
+    `<div class="stat-card"><div class="s-label">Total</div><div class="s-value">${ps.length}</div><div class="s-sub">${ps.filter(p=>p.tipo!=='melee').length} ind · ${ps.filter(p=>p.tipo==='melee').length} melee</div></div>` +
+    Object.entries(ESTADOS).map(([k,[,lbl]]) =>
+      `<div class="stat-card"><div class="s-label">${lbl}</div><div class="s-value" style="color:${ESTADO_COLORS[k]}">${byEstado(k)}</div></div>`
+    ).join('');
+
+  const byKey = (arr, key) => arr.reduce((m,p) => { m[p[key]]=(m[p[key]]||0)+1; return m; }, {});
+  const mkRows = obj => Object.entries(obj).length
+    ? Object.entries(obj).map(([k,v]) => `<div class="result-row"><span style="color:var(--muted)">${k}</span><span style="font-weight:600;color:var(--gold-lt)">${v}</span></div>`).join('')
+    : '<p style="color:var(--muted);font-size:13px">Sin datos</p>';
+
+  document.getElementById('dash-canales').innerHTML = mkRows(byKey(ps,'canal'));
+  document.getElementById('dash-areas').innerHTML   = mkRows(byKey(ps,'area_negocio'));
+
+  const recientes = [...ps].reverse().slice(0,5);
+  const el = document.getElementById('dash-recientes');
+  el.innerHTML = recientes.length
+    ? recientes.map(p => piedraItemHtml(p)).join('')
+    : `<div class="empty"><div class="big">💎</div><p>Sin registros aún.</p></div>`;
+}
+
+// ── INVENTARIO ────────────────────────────────────────────────────────────────
+let _filtroEstados = new Set();
+
+function toggleEstado(k) {
+  if (_filtroEstados.has(k)) _filtroEstados.delete(k);
+  else _filtroEstados.add(k);
+  renderInventario();
+}
+function limpiarEstados() {
+  _filtroEstados.clear();
+  renderInventario();
+}
+
+function renderInventario() {
+  const all    = loadData().piedras;
+  const buscar = (document.getElementById('f-buscar')?.value||'').toLowerCase();
+  const tipo   = document.getElementById('f-tipo')?.value||'';
+  const canal  = document.getElementById('f-canal')?.value||'';
+  const area   = document.getElementById('f-area')?.value||'';
+
+  // Render status pills multi-select
+  const tabsEl = document.getElementById('status-tabs');
+  if (tabsEl) {
+    tabsEl.innerHTML = Object.entries(ESTADOS).map(([k,[,lbl]]) => {
+      const n      = all.filter(p => p.estado===k).length;
+      const active = _filtroEstados.has(k);
+      const col    = ESTADO_COLORS[k];
+      const style  = active ? `background:${col}22;border-color:${col};color:${col}` : '';
+      return `<button class="stab" style="${style}" onclick="toggleEstado('${k}')">${lbl}<span class="cnt">${n}</span></button>`;
+    }).join('');
+    // Actualizar contador y botón limpiar
+    const n = _filtroEstados.size;
+    const sc = document.getElementById('sel-count');
+    const cs = document.getElementById('clear-sel');
+    if (sc) { sc.textContent = n; sc.classList.toggle('show', n>0); }
+    if (cs) cs.classList.toggle('show', n>0);
+  }
+
+  let ps = [...all].reverse();
+  if (_filtroEstados.size) ps = ps.filter(p => _filtroEstados.has(p.estado));
+  if (tipo==='melee')      ps = ps.filter(p => p.tipo==='melee');
+  if (tipo==='individual') ps = ps.filter(p => p.tipo!=='melee');
+  if (canal)  ps = ps.filter(p => p.canal===canal);
+  if (area)   ps = ps.filter(p => p.area_negocio===area);
+  if (buscar) ps = ps.filter(p =>
+    (p.codigo||'').toLowerCase().includes(buscar) ||
+    (p.forma||p.m_corte||'').toLowerCase().includes(buscar) ||
+    (p.laboratorio||'').toLowerCase().includes(buscar) ||
+    (p.numero_cert||'').toLowerCase().includes(buscar) ||
+    (p.numero_guia||'').toLowerCase().includes(buscar) ||
+    (p.cliente||'').toLowerCase().includes(buscar) ||
+    (p.m_tamano||'').toLowerCase().includes(buscar)
+  );
+
+  const el = document.getElementById('inv-list');
+  el.innerHTML = ps.length
+    ? ps.map(p => piedraItemHtml(p)).join('')
+    : `<div class="empty"><div class="big">🔍</div><p>No se encontraron piedras.</p></div>`;
+}
+
+function piedraItemHtml(p) {
+  let info = '';
+  if (p.tipo === 'melee') {
+    info = [p.m_corte, p.m_tamano, p.m_origen, p.m_cantidad ? p.m_cantidad+' pzas' : '', p.m_peso ? p.m_peso+'ct' : ''].filter(Boolean).join(' · ');
+  } else {
+    info = [p.quilates ? fmtNum(p.quilates,2)+' ct':'' , p.color, p.claridad, p.forma].filter(Boolean).join(' · ');
+  }
+  return `
+    <div class="piedra-item">
+      <div class="meta" onclick="openDetalle('${p.codigo}')">
+        <span class="code">${p.codigo} ${p.tipo==='melee' ? '<span class="badge badge-melee" style="font-size:10px;padding:1px 6px">MELEE</span>' : ''}</span>
+        <span class="sub">${p.fecha_llegada} · ${p.canal} · ${p.area_negocio}${p.cliente?' · '+p.cliente:''}</span>
+        <span class="sub" style="color:var(--gold-lt)">${info}</span>
+      </div>
+      <div class="right">
+        <div class="spop-wrap">
+          <span onclick="abrirSpop('${p.codigo}',event)">${renderBadge(p.estado)}</span>
+          <div class="spop">
+            ${Object.entries(ESTADOS).map(([k,[,lbl]]) => `
+              <button class="${p.estado===k?'cur':''}" style="${p.estado===k?`color:${ESTADO_COLORS[k]}`:''}"
+                onclick="cambiarEstadoRapido('${p.codigo}','${k}',event)">
+                <span class="spop-dot" style="background:${ESTADO_COLORS[k]}"></span>${lbl}
+              </button>`).join('')}
+          </div>
+        </div>
+        <button class="btn-icon edit" onclick="editarPiedra('${p.codigo}')">✏️</button>
+        <button class="btn-icon" onclick="eliminarPiedra('${p.codigo}')">🗑</button>
+      </div>
+    </div>`;
+}
+
+// ── ARCHIVOS ──────────────────────────────────────────────────────────────────
+function handleFile(tipo) {
+  const f = document.getElementById(`file-${tipo}`).files[0];
+  if (f) readFile(f, tipo);
+}
+function readFile(file, tipo) {
+  const reader = new FileReader();
+  reader.onload = e => {
+    _archivos[tipo] = { nombre:file.name, mime:file.type, data:e.target.result };
+    document.getElementById(`file-${tipo}-name`).textContent = '✓ '+file.name;
+  };
+  reader.readAsDataURL(file);
+}
+function dragOver(e, id) { e.preventDefault(); document.getElementById(id).classList.add('drag'); }
+function dragLeave(id)   { document.getElementById(id).classList.remove('drag'); }
+function dropFile(e, tipo) {
+  e.preventDefault();
+  dragLeave(tipo==='cert'?'zone-cert':'zone-foto');
+  const f = e.dataTransfer.files[0];
+  if (f) readFile(f, tipo);
+}
+
+
+// ── REGISTRAR ─────────────────────────────────────────────────────────────────
+function registrarPiedra() {
+  const errEl = document.getElementById('nueva-error');
+  errEl.style.display = 'none';
+
+  const cliente     = document.getElementById('n-cliente').value.trim();
+  const area_negocio = document.getElementById('n-area').value;
+  const base = {
+    codigo:       nextCodigo(cliente, area_negocio, _editCodigo),
+    tipo:         _tipoActual,
+    fecha_llegada:document.getElementById('n-fecha').value || today(),
+    canal:        document.getElementById('n-canal').value,
+    area_negocio,
+    cliente,
+    estado:       document.getElementById('n-estado').value,
+    numero_guia:  document.getElementById('n-numguia').value.trim(),
+    notas:        document.getElementById('n-notas').value.trim(),
+  };
+
+  let piedra;
+  if (_tipoActual === 'melee') {
+    const cantidad = parseInt(document.getElementById('m-cantidad').value);
+    if (!cantidad || cantidad < 1) {
+      errEl.textContent = 'Ingresa la cantidad de piezas melee.';
+      errEl.style.display='block'; return;
+    }
+    piedra = { ...base,
+      m_corte:   document.getElementById('m-corte').value,
+      m_tamano:  document.getElementById('m-tamano').value.trim(),
+      m_origen:  document.getElementById('m-origen').value,
+      m_cantidad: cantidad,
+      m_peso:    parseFloat(document.getElementById('m-peso').value) || null,
+    };
+  } else {
+    const quilates = parseFloat(document.getElementById('n-quilates').value);
+    if (!quilates || quilates <= 0) {
+      errEl.textContent = 'Ingresa los quilates del diamante.';
+      errEl.style.display='block'; return;
+    }
+    piedra = { ...base,
+      quilates,
+      color:       document.getElementById('n-color').value,
+      claridad:    document.getElementById('n-claridad').value,
+      corte:       document.getElementById('n-corte').value,
+      forma:       document.getElementById('n-forma').value,
+      largo_mm:    parseFloat(document.getElementById('n-largo').value)||null,
+      ancho_mm:    parseFloat(document.getElementById('n-ancho').value)||null,
+      prof_mm:     parseFloat(document.getElementById('n-prof').value) ||null,
+      laboratorio: document.getElementById('n-lab').value,
+      numero_cert: document.getElementById('n-numcert').value.trim(),
+      certificado: _archivos.cert || null,
+      foto:        _archivos.foto || null,
+    };
+  }
+
+  const d = loadData();
+  if (_editCodigo) {
+    const idx = d.piedras.findIndex(p => p.codigo === _editCodigo);
+    if (idx !== -1) {
+      // Preserve historial if exists
+      if (d.piedras[idx].historial_estados) piedra.historial_estados = d.piedras[idx].historial_estados;
+      d.piedras[idx] = piedra;
+    }
+    toast(`${piedra.codigo} actualizado ✓`);
+  } else {
+    piedra.historial_estados = [{ estado: piedra.estado, desde: new Date().toISOString() }];
+    d.piedras.push(piedra);
+    toast(`${piedra.codigo} registrado ✓`);
+  }
+  saveData(d);
+  limpiarNueva();
+  showPage('inventario');
+}
+
+function limpiarNueva() {
+  ['n-quilates','n-color','n-claridad','n-corte','n-forma','n-largo','n-ancho',
+   'n-prof','n-lab','n-numcert','n-notas','n-cliente','n-numguia','m-corte','m-tamano','m-cantidad','m-peso']
+    .forEach(id => { const el=document.getElementById(id); if(el) el.value=''; });
+  document.getElementById('n-fecha').value   = today();
+  document.getElementById('n-canal').value   = 'NIVODA';
+  document.getElementById('n-area').value    = 'Hera Haus';
+  document.getElementById('n-estado').value  = 'pedido';
+  document.getElementById('m-origen').value  = 'Natural';
+  document.getElementById('file-cert-name').textContent = '';
+  document.getElementById('file-foto-name').textContent = '';
+  document.getElementById('nueva-error').style.display  = 'none';
+  _archivos   = {};
+  _editCodigo = null;
+  document.getElementById('page-nueva').querySelector('h2').textContent = 'Registrar Nueva Piedra';
+  document.querySelector('button[onclick="registrarPiedra()"]').textContent = 'Guardar Piedra';
+  setTipo('individual');
+}
+
+// ── EDITAR ────────────────────────────────────────────────────────────────────
+function editarPiedra(codigo) {
+  const p = loadData().piedras.find(x => x.codigo === codigo);
+  if (!p) return;
+  _editCodigo = codigo;
+
+  showPage('nueva');
+  document.getElementById('page-nueva').querySelector('h2').textContent = `Editar Piedra: ${codigo}`;
+  document.querySelector('button[onclick="registrarPiedra()"]').textContent = '💾 Actualizar Piedra';
+
+  // Campos comunes
+  document.getElementById('n-fecha').value   = p.fecha_llegada || today();
+  document.getElementById('n-canal').value   = p.canal || 'NIVODA';
+  document.getElementById('n-area').value    = p.area_negocio || 'Hera Haus';
+  document.getElementById('n-cliente').value = p.cliente || '';
+  document.getElementById('n-estado').value   = p.estado || 'pedido';
+  document.getElementById('n-numguia').value  = p.numero_guia || '';
+  document.getElementById('n-notas').value    = p.notas || '';
+
+  setTipo(p.tipo);
+
+  if (p.tipo === 'melee') {
+    document.getElementById('m-corte').value    = p.m_corte || '';
+    document.getElementById('m-tamano').value   = p.m_tamano || '';
+    document.getElementById('m-origen').value   = p.m_origen || 'Natural';
+    document.getElementById('m-cantidad').value = p.m_cantidad || '';
+    document.getElementById('m-peso').value     = p.m_peso || '';
+  } else {
+    document.getElementById('n-quilates').value = p.quilates || '';
+    document.getElementById('n-color').value    = p.color || '';
+    document.getElementById('n-claridad').value = p.claridad || '';
+    document.getElementById('n-corte').value    = p.corte || '';
+    document.getElementById('n-forma').value    = p.forma || '';
+    document.getElementById('n-largo').value    = p.largo_mm || '';
+    document.getElementById('n-ancho').value    = p.ancho_mm || '';
+    document.getElementById('n-prof').value     = p.prof_mm || '';
+    document.getElementById('n-lab').value      = p.laboratorio || 'Sin certificado';
+    document.getElementById('n-numcert').value  = p.numero_cert || '';
+    _archivos = {};
+    if (p.certificado) { _archivos.cert = p.certificado; document.getElementById('file-cert-name').textContent = '✓ '+p.certificado.nombre; }
+    if (p.foto)        { _archivos.foto = p.foto;         document.getElementById('file-foto-name').textContent = '✓ '+p.foto.nombre; }
+  }
+}
+
+// ── ELIMINAR ──────────────────────────────────────────────────────────────────
+function eliminarPiedra(codigo) {
+  if (!window.confirm(`¿Eliminar ${codigo}? Esta acción no se puede deshacer.`)) return;
+  const d = loadData();
+  d.piedras = d.piedras.filter(p => p.codigo !== codigo);
+  saveData(d);
+  renderDashboard(); renderInventario();
+  toast(`${codigo} eliminado ✓`);
+}
+
+// ── DETALLE ───────────────────────────────────────────────────────────────────
+function openDetalle(codigo) {
+  const p = loadData().piedras.find(x => x.codigo === codigo);
+  if (!p) return;
+
+  document.getElementById('modal-title').textContent = p.codigo;
+  document.getElementById('modal-edit-btn').onclick = () => { closeModal(); editarPiedra(p.codigo); };
+  const estado = p.estado || 'pedido';
+  let html = '';
+
+  if (p.tipo === 'melee') {
+    html += `
+      <div class="result-row"><span class="rl">Tipo</span><span class="rv"><span class="badge badge-melee">MELEE</span></span></div>
+      <div class="result-row"><span class="rl">Corte</span><span class="rv">${p.m_corte||'—'}</span></div>
+      <div class="result-row"><span class="rl">Tamaño</span><span class="rv gold">${p.m_tamano||'—'}</span></div>
+      <div class="result-row"><span class="rl">Origen</span><span class="rv">${p.m_origen||'—'}</span></div>
+      <div class="result-row"><span class="rl">Cantidad</span><span class="rv">${p.m_cantidad||'—'} piezas</span></div>
+      <div class="result-row"><span class="rl">Peso total</span><span class="rv">${p.m_peso ? fmtNum(p.m_peso,2)+' ct' : '—'}</span></div>
+    `;
+  } else {
+    html += `
+      <div class="cs-grid">
+        <div class="cs-card"><div class="cs-label">Quilates</div><div class="cs-value">${fmtNum(p.quilates,2)}</div><div class="cs-sub">ct</div></div>
+        <div class="cs-card"><div class="cs-label">Color</div><div class="cs-value">${p.color||'—'}</div></div>
+        <div class="cs-card"><div class="cs-label">Claridad</div><div class="cs-value" style="font-size:15px">${p.claridad||'—'}</div></div>
+        <div class="cs-card"><div class="cs-label">Corte</div><div class="cs-value" style="font-size:13px">${p.corte||'—'}</div></div>
+      </div>
+      <div class="result-row"><span class="rl">Forma</span><span class="rv"><span class="forma-badge">${p.forma||'—'}</span></span></div>
+      <div class="result-row"><span class="rl">Dimensiones</span><span class="rv">${p.largo_mm&&p.ancho_mm&&p.prof_mm ? `${fmtNum(p.largo_mm)} × ${fmtNum(p.ancho_mm)} × ${fmtNum(p.prof_mm)} mm`:'—'}</span></div>
+      <div class="result-row"><span class="rl">Certificado</span><span class="rv">${p.laboratorio && p.laboratorio!=='Sin certificado' ? `${p.laboratorio}${p.numero_cert?' · '+p.numero_cert:''}` : 'Sin certificado'}</span></div>
+      <hr class="sep">
+    `;
+  }
+
+  html += `
+    <div class="result-row"><span class="rl">Llegada</span><span class="rv">${p.fecha_llegada}</span></div>
+    <div class="result-row"><span class="rl">Canal</span><span class="rv">${p.canal}</span></div>
+    <div class="result-row"><span class="rl">Área</span><span class="rv">${p.area_negocio}</span></div>
+    ${p.cliente?`<div class="result-row"><span class="rl">Cliente</span><span class="rv">${p.cliente}</span></div>`:''}
+    ${p.numero_guia?`<div class="result-row"><span class="rl">Núm. de guía</span><span class="rv gold">${p.numero_guia}</span></div>`:''}
+    <hr class="sep">
+    <div class="result-row"><span class="rl">Estado</span><span>${renderBadge(estado)}</span></div>
+    <div class="state-bar">
+      ${Object.entries(ESTADOS).map(([k,[,lbl]]) =>
+        `<button class="state-btn ${estado===k ? STATE_CLS[k] : ''}" onclick="cambiarEstado('${codigo}','${k}')">${lbl}</button>`
+      ).join('')}
+    </div>
+  `;
+
+  if (p.notas) html += `<hr class="sep"><p style="font-size:13px;color:var(--muted)">${p.notas}</p>`;
+
+  // Historial de estados
+  if (p.historial_estados && p.historial_estados.length) {
+    html += `<hr class="sep"><h3 style="margin-bottom:12px">📅 Historial de estados</h3><div class="timeline">`;
+    p.historial_estados.forEach(h => {
+      const col  = ESTADO_COLORS[h.estado] || 'var(--muted)';
+      const lbl  = ESTADOS[h.estado]?.[1] || h.estado;
+      const d1   = h.desde ? h.desde.slice(0,10) : '';
+      const d2   = h.hasta ? h.hasta.slice(0,10) : '';
+      const dias = h.dias != null ? `<span style="color:${col}">${h.dias} días</span>` : `<span class="tl-current">En curso…</span>`;
+      html += `<div class="tl-row">
+        <span class="tl-dot" style="background:${col}"></span>
+        <span class="tl-label">${lbl}</span>
+        <span class="tl-dates">${d1}${d2?' → '+d2:''}</span>
+        <span class="tl-dias">${dias}</span>
+      </div>`;
+    });
+    html += `</div>`;
+    // Total pedido→en_tienda
+    const totalDias = calcTotalDias(p);
+    if (totalDias != null) html += `<div style="margin-top:10px;font-size:13px;color:var(--muted)">Total Pedido → En Tienda: <strong style="color:var(--gold-lt)">${totalDias} días</strong></div>`;
+  }
+
+  if (p.certificado) html += `<hr class="sep"><h3 style="margin-bottom:8px">Certificado — ${p.certificado.nombre}</h3>
+    <div class="cert-viewer">
+      ${p.certificado.mime==='application/pdf'
+        ? `<iframe src="${p.certificado.data}"></iframe>`
+        : `<img src="${p.certificado.data}" />`}
+    </div>`;
+
+  if (p.foto) html += `<hr class="sep"><h3 style="margin-bottom:8px">Foto</h3>
+    <div class="cert-viewer"><img src="${p.foto.data}" /></div>`;
+
+  document.getElementById('modal-body').innerHTML = html;
+  document.getElementById('modal-overlay').classList.add('open');
+}
+
+function closeModal(e) {
+  if (!e || e.target===document.getElementById('modal-overlay'))
+    document.getElementById('modal-overlay').classList.remove('open');
+}
+
+// ── ESTADO ────────────────────────────────────────────────────────────────────
+let _openSpop = null;
+
+function abrirSpop(codigo, e) {
+  e.stopPropagation();
+  const pop = e.currentTarget.closest('.spop-wrap')?.querySelector('.spop');
+  if (!pop) return;
+  if (_openSpop && _openSpop !== pop) _openSpop.classList.remove('open');
+  pop.classList.toggle('open');
+  _openSpop = pop.classList.contains('open') ? pop : null;
+}
+
+function cambiarEstadoRapido(codigo, nuevoEstado, e) {
+  e.stopPropagation();
+  if (_openSpop) { _openSpop.classList.remove('open'); _openSpop = null; }
+  cambiarEstado(codigo, nuevoEstado, false);
+}
+
+function cambiarEstado(codigo, nuevoEstado, reabrirDetalle = true) {
+  const d = loadData();
+  const p = d.piedras.find(x => x.codigo===codigo);
+  if (!p) return;
+  const ahora = new Date().toISOString();
+  // Init historial if missing
+  if (!p.historial_estados) p.historial_estados = [{ estado: p.estado, desde: p.fecha_llegada ? p.fecha_llegada+'T12:00:00Z' : ahora }];
+  // Close current entry
+  const h = p.historial_estados;
+  if (h.length && !h[h.length-1].hasta) {
+    h[h.length-1].hasta = ahora;
+    h[h.length-1].dias  = Math.round((new Date(ahora) - new Date(h[h.length-1].desde)) / 8640000) / 10;
+  }
+  // Open new entry
+  h.push({ estado: nuevoEstado, desde: ahora });
+  p.estado = nuevoEstado;
+  saveData(d);
+  const lbl = ESTADOS[nuevoEstado]?.[1] || nuevoEstado;
+  toast(`Estado: ${lbl}`);
+  renderDashboard(); renderInventario();
+  if (reabrirDetalle) openDetalle(codigo);
+}
+
+// ── TENDENCIAS ────────────────────────────────────────────────────────────────
+function calcTotalDias(p) {
+  if (!p.historial_estados) return null;
+  const ini = p.historial_estados.find(h => h.estado === 'pedido');
+  const fin = p.historial_estados.find(h => h.estado === 'en_tienda');
+  if (!ini || !fin) return null;
+  return Math.round((new Date(fin.desde) - new Date(ini.desde)) / 8640000) / 10;
+}
+
+function moda(arr) {
+  const vals = arr.filter(v => v != null && v !== '' && v !== '— —');
+  if (!vals.length) return '—';
+  const freq = vals.reduce((m,v) => { m[v]=(m[v]||0)+1; return m; }, {});
+  const top  = Object.entries(freq).sort((a,b) => b[1]-a[1]);
+  return { val: top[0][0], n: top[0][1], freq: top.slice(0,4) };
+}
+
+function quilatesBucket(q) {
+  if (!q) return null;
+  if (q < 0.5) return '< 0.5 ct';
+  if (q < 1.0) return '0.5 – 1.0 ct';
+  if (q < 1.5) return '1.0 – 1.5 ct';
+  if (q < 2.0) return '1.5 – 2.0 ct';
+  if (q < 3.0) return '2.0 – 3.0 ct';
+  return '> 3.0 ct';
+}
+
+function renderTendencias() {
+  const all  = loadData().piedras;
+  const ind  = all.filter(p => p.tipo !== 'melee');
+  const areas = ['Hera Haus', 'B2B'];
+
+  const avg = arr => arr.length ? Math.round(arr.reduce((a,b)=>a+b,0)/arr.length*10)/10 : null;
+
+  // ── Tiempos por canal ──────────────────────────────────────────
+  // Detectar qué canales tienen datos de historial
+  const canalesConDatos = [...new Set(all.filter(p=>p.historial_estados).map(p=>p.canal))].filter(Boolean);
+
+  if (!canalesConDatos.length) {
+    document.getElementById('t-header').innerHTML = '';
+    document.getElementById('t-tiempos').innerHTML = '<p style="color:var(--muted);font-size:13px">Aún no hay datos de tiempo. Cambia el estatus de alguna piedra para empezar a medir.</p>';
+    document.getElementById('t-total').innerHTML   = '';
+  } else {
+    // Acumular días por canal+estado
+    const map = {}; // { 'NIVODA_pedido': [dias,...] }
+    all.forEach(p => {
+      if (!p.historial_estados || !p.canal) return;
+      p.historial_estados.forEach(h => {
+        if (h.dias == null) return;
+        const key = `${p.canal}_${h.estado}`;
+        if (!map[key]) map[key] = [];
+        map[key].push(h.dias);
+      });
+    });
+
+    // Header dinámico
+    const colW = `repeat(${canalesConDatos.length},1fr)`;
+    document.getElementById('t-header').innerHTML = `
+      <div style="display:grid;grid-template-columns:180px ${colW};gap:8px;align-items:center;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;padding:0 4px">
+        <span>Estado</span>
+        ${canalesConDatos.map(c => `<span style="color:${CANAL_COLORS[c]||'var(--text)'}">● ${c}</span>`).join('')}
+      </div>`;
+
+    // Filas por estado
+    let tiemposHtml = '';
+    Object.entries(ESTADOS).forEach(([k,[,lbl]]) => {
+      const vals = canalesConDatos.map(c => avg(map[`${c}_${k}`]||[]));
+      if (vals.every(v=>v==null)) return;
+      const maxD = Math.max(...vals.map(v=>v||0)) || 1;
+      const eCol = ESTADO_COLORS[k];
+      tiemposHtml += `
+        <div style="display:grid;grid-template-columns:180px ${colW};gap:8px;align-items:center;padding:8px 4px;border-bottom:1px solid rgba(255,255,255,.04)">
+          <span style="font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px">
+            <span style="width:8px;height:8px;border-radius:50%;background:${eCol};display:inline-block;flex-shrink:0"></span>${lbl}
+          </span>
+          ${vals.map((v,i) => {
+            const col = CANAL_COLORS[canalesConDatos[i]]||'var(--text)';
+            return `<div style="display:flex;align-items:center;gap:6px">
+              <div class="bar-wrap" style="flex:1"><div class="bar-fill" style="width:${v?Math.round(v/maxD*100):0}%;background:${col}"></div></div>
+              <span style="font-size:12px;font-weight:700;min-width:34px;text-align:right;color:${v?col:'var(--muted)'}">${v!=null?v+'d':'—'}</span>
+            </div>`;
+          }).join('')}
+        </div>`;
+    });
+    document.getElementById('t-tiempos').innerHTML = tiemposHtml || '';
+
+    // Totales Pedido→En Tienda por canal
+    const totales = canalesConDatos.map(c => {
+      const dias = all.filter(p=>p.canal===c).map(calcTotalDias).filter(v=>v!=null);
+      return { canal:c, avg:avg(dias), n:dias.length };
+    }).filter(t=>t.n>0);
+    document.getElementById('t-total').innerHTML = totales.length ? `
+      <div style="font-size:12px;color:var(--muted);margin-bottom:8px;text-transform:uppercase;letter-spacing:.8px">Total Pedido → En Tienda</div>
+      <div style="display:flex;gap:20px;flex-wrap:wrap">
+        ${totales.map(t=>`
+          <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px 16px;text-align:center">
+            <div style="font-size:11px;color:${CANAL_COLORS[t.canal]||'var(--text)'};font-weight:700;margin-bottom:4px">${t.canal}</div>
+            <div style="font-size:22px;font-weight:700;color:var(--text)">${t.avg}<span style="font-size:12px;color:var(--muted)"> d</span></div>
+            <div style="font-size:11px;color:var(--muted);margin-top:2px">${t.n} pieza${t.n!==1?'s':''}</div>
+          </div>`).join('')}
+      </div>` : '';
+  }
+
+  // ── Tendencias por área ──────────────────────────────────────────
+  areas.forEach(area => {
+    const ps   = ind.filter(p => p.area_negocio === area);
+    const elId = area === 'Hera Haus' ? 't-hh' : 't-b2b';
+    const col  = area === 'Hera Haus' ? 'var(--gold-lt)' : 'var(--blue)';
+    if (!ps.length) {
+      document.getElementById(elId).innerHTML = '<p style="color:var(--muted);font-size:13px">Sin datos aún.</p>';
+      return;
+    }
+
+    const mkBar = (m, total, col) => {
+      if (!m || !m.freq.length) return '<p style="color:var(--muted);font-size:12px">Sin datos</p>';
+      return m.freq.map(([k,v]) => `
+        <div class="bar-row">
+          <span class="bar-label">${k}</span>
+          <div class="bar-wrap"><div class="bar-fill" style="width:${Math.round(v/total*100)}%;background:${col}"></div></div>
+          <span class="bar-val">${v}</span>
+        </div>`).join('');
+    };
+
+    const seccion = (titulo, contenido) => `
+      <div style="margin-bottom:16px">
+        <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px">${titulo}</div>
+        ${contenido}
+      </div>`;
+
+    const n = ps.length;
+    const html = [
+      seccion('Quilates (rango)', mkBar(moda(ps.map(p=>quilatesBucket(p.quilates))), n, col)),
+      seccion('Color',    mkBar(moda(ps.map(p=>p.color).filter(Boolean)),    n, col)),
+      seccion('Claridad', mkBar(moda(ps.map(p=>p.claridad).filter(Boolean)), n, col)),
+      seccion('Corte',    mkBar(moda(ps.map(p=>p.corte).filter(Boolean)),    n, col)),
+      seccion('Forma',    mkBar(moda(ps.map(p=>p.forma).filter(Boolean)),    n, col)),
+      seccion('Canal',    mkBar(moda(ps.map(p=>p.canal).filter(Boolean)),    n, col)),
+    ].join('');
+
+    document.getElementById(elId).innerHTML =
+      `<div style="font-size:13px;color:var(--muted);margin-bottom:16px">${n} diamante${n!==1?'s':''} registrado${n!==1?'s':''}</div>` + html;
+  });
+}
+
+// ── INIT ──────────────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('n-fecha').value = today();
+  renderDashboard();
+});
+document.addEventListener('click', () => {
+  if (_openSpop) { _openSpop.classList.remove('open'); _openSpop = null; }
+});
+</script>
+</body>
+</html>
