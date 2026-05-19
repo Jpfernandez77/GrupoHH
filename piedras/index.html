@@ -113,9 +113,9 @@
     .piedra-item { background:var(--card); border:1px solid var(--border); border-radius:8px; padding:16px 20px; display:flex; align-items:center; justify-content:space-between; transition:border-color .15s; }
     .piedra-item:hover { border-color:var(--gold-dk); }
 
-    /* Client group header */
-    .client-grp-hdr { display:flex; align-items:center; gap:8px; padding:6px 4px 4px; color:var(--gold-lt); font-size:13px; font-weight:700; border-bottom:1px solid rgba(196,168,130,.12); margin-top:6px; }
-    .client-grp-hdr:first-child { margin-top:0; }
+    /* Client group */
+    .client-grp-block { display:flex; flex-direction:column; gap:10px; margin-bottom:10px; }
+    .client-grp-hdr { display:flex; align-items:center; gap:8px; padding:6px 4px 4px; color:var(--gold-lt); font-size:13px; font-weight:700; border-bottom:1px solid rgba(196,168,130,.18); }
     .client-grp-cnt { font-size:11px; font-weight:600; color:var(--muted); background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:1px 7px; }
     .cert-tag { font-size:11px; color:var(--muted); font-weight:400; margin-left:8px; letter-spacing:.2px; }
     .piedra-item .meta { display:flex; flex-direction:column; gap:4px; cursor:pointer; flex:1; min-width:0; }
@@ -866,9 +866,13 @@ function renderInventario() {
   for (const [cliente, arr] of orderedGroups) {
     if (arr.length >= 2) {
       const nombre = cliente || 'Sin cliente';
-      html += `<div class="client-grp-hdr">👤 ${nombre}<span class="client-grp-cnt">${arr.length}</span></div>`;
+      html += `<div class="client-grp-block">
+        <div class="client-grp-hdr">👤 ${nombre}<span class="client-grp-cnt">${arr.length}</span></div>
+        ${arr.map(p => piedraItemHtml(p)).join('')}
+      </div>`;
+    } else {
+      html += arr.map(p => piedraItemHtml(p)).join('');
     }
-    html += arr.map(p => piedraItemHtml(p)).join('');
   }
   el.innerHTML = html;
 }
