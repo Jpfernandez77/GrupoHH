@@ -622,6 +622,17 @@
           </div>
         </div>
 
+        <div class="card" style="margin-top:0">
+          <h3>Sobrante de Oro 24k</h3>
+          <div class="grid-2">
+            <div class="field">
+              <label>¿Sobró oro 24k? <span style="color:var(--muted);font-weight:400">(gramos físicos sin usar)</span></label>
+              <input type="number" id="c-sobro-real" placeholder="0.0000" min="0" step="0.0001" value="0" onchange="calcularPreview()" />
+            </div>
+          </div>
+          <p style="font-size:12px;color:var(--muted);margin-top:10px">Este valor se guardará para poder reutilizarlo en futuras tandas.</p>
+        </div>
+
         <div id="c-preview" class="result-box" style="display:none"></div>
 
         <div class="actions">
@@ -1797,6 +1808,8 @@ function cargarTandaParaCompletar() {
     document.getElementById(`c-${k}-malas`).value  = 0;
     document.getElementById(`c-${k}-peso`).value   = 0;
   });
+  const sobroEl = document.getElementById('c-sobro-real');
+  if (sobroEl) sobroEl.value = '0';
   document.getElementById('c-preview').style.display = 'none';
   formEl.style.display = 'block';
 }
@@ -1826,16 +1839,15 @@ function calcularPreview() {
 
   if (!totalSalida) { document.getElementById('c-preview').style.display = 'none'; return; }
 
-  const sobro       = totalDisp - totalSalida;
-  const finoSobro   = finoEntrada - totalFino;
-  const kilateSobro = sobro > 0.0001 ? (finoSobro / sobro) * 24 : 0;
-  const rendimiento = (totalSalida / totalDisp * 100);
-  const sobroColor  = sobro >= 0 ? 'green' : 'red';
+  const sobro_teorico = totalDisp - totalSalida;
+  const sobro_real    = parseFloat(document.getElementById('c-sobro-real')?.value) || 0;
+  const rendimiento   = (totalSalida / totalDisp * 100);
+  const sobroColor    = sobro_real >= 0 ? 'green' : 'red';
 
-  const sobroRow = sobro > 0.0001 ? `
-    <div class="result-row" style="background:rgba(201,168,76,.06);padding:10px 12px;border-radius:6px;margin-top:4px">
-      <span class="label" style="font-weight:600;color:var(--text)">Kilataje del sobrante (para reciclar)</span>
-      <span class="value gold" style="font-size:16px">${fmtNum(kilateSobro, 2)}k</span>
+  const sobroRow = sobro_real > 0.0001 ? `
+    <div class="result-row" style="background:rgba(106,175,130,.08);padding:10px 12px;border-radius:6px;margin-top:4px;border:1px solid rgba(106,175,130,.2)">
+      <span class="label" style="font-weight:600;color:var(--text)">☁️ Sobrante 24k que quedará disponible</span>
+      <span class="value" style="color:var(--green);font-size:16px;font-weight:700">${fmtNum(sobro_real, 4)} g</span>
     </div>` : '';
 
   const box = document.getElementById('c-preview');
@@ -1866,8 +1878,8 @@ function calcularPreview() {
       <span class="value">${fmtNum(totalDisp)} g</span>
     </div>
     <div class="result-row">
-      <span class="label">Sobrante 24k sin usar</span>
-      <span class="value ${sobroColor}">${fmtNum(sobro, 4)} g</span>
+      <span class="label">Diferencia teórica (entrada − salida)</span>
+      <span class="value" style="color:var(--muted)">${fmtNum(sobro_teorico, 4)} g</span>
     </div>
     <div class="result-row">
       <span class="label">Rendimiento</span>
@@ -1900,9 +1912,8 @@ async function completarTanda() {
   });
 
 
-  const sobro_g     = +(finoEntrada - totalFino).toFixed(4);
-  const finoSobro   = finoEntrada - totalFino;
-  const kilateSobro = sobro_g > 0.0001 ? +((finoSobro / sobro_g) * 24).toFixed(2) : 0;
+  const sobro_g     = +(parseFloat(document.getElementById('c-sobro-real')?.value) || 0).toFixed(4);
+  const sobro_teorico_g = +(finoEntrada - totalFino).toFixed(4);
 
   const completacion = {
     fecha_completacion:  today(),
@@ -1910,7 +1921,8 @@ async function completarTanda() {
     total_salida_g:      +totalSalida.toFixed(4),
     total_fino_salida_g: +totalFino.toFixed(4),
     sobro_g,
-    kilate_sobro:        kilateSobro,
+    sobro_teorico_g,
+    kilate_sobro:        24,
     rendimiento_pct:     finoEntrada > 0 ? +(totalFino / finoEntrada * 100).toFixed(2) : 0,
   };
 
