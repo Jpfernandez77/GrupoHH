@@ -269,6 +269,10 @@
     <!-- DASHBOARD -->
     <div id="page-dashboard" class="page active">
       <h2>Dashboard</h2>
+      <div id="migrate-banner" style="display:none;background:rgba(224,92,92,.12);border:1px solid var(--red);border-radius:8px;padding:14px 18px;margin-bottom:20px;align-items:center;justify-content:space-between;gap:12px">
+        <span style="font-size:14px;color:var(--text)">⚠️ Hay datos locales que no están en la nube.</span>
+        <button class="btn btn-gold btn-sm" onclick="migrarTodo()" id="btn-migrar">☁️ Subir todo a Supabase</button>
+      </div>
       <div class="stats-strip" id="dash-stats"></div>
       <div class="grid-2" style="margin-bottom:20px">
         <div class="card"><h3>Por Canal</h3><div id="dash-canales"></div></div>
@@ -1546,11 +1550,43 @@ function eliminarItem(tipo, idx) {
   toast('Eliminado ✓');
 }
 
+async function migrarTodo() {
+  const btn = document.getElementById('btn-migrar');
+  btn.textContent = 'Subiendo…'; btn.disabled = true;
+  setSyncStatus('loading');
+  const ps = loadData().piedras;
+  let ok = 0, fail = 0;
+  for (const piedra of ps) {
+    try {
+      await sbFetch('POST', '/rest/v1/piedras',
+        { codigo: piedra.codigo, data: piedra },
+        { 'Prefer': 'resolution=merge-duplicates,return=minimal' });
+      ok++;
+    } catch(e) { console.error('migrar piedra', piedra.codigo, e.message); fail++; }
+  }
+  btn.textContent = '☁️ Subir todo a Supabase'; btn.disabled = false;
+  if (fail === 0) {
+    setSyncStatus('ok');
+    document.getElementById('migrate-banner').style.display = 'none';
+    toast(`✓ ${ok} piedra(s) subidas a la nube`);
+  } else {
+    setSyncStatus('error', `${fail} errores`);
+    toast(`⚠ ${ok} ok, ${fail} fallaron`, 'var(--red)');
+  }
+}
+
+function checkMigrateBanner() {
+  const banner = document.getElementById('migrate-banner');
+  if (!banner) return;
+  banner.style.display = loadData().piedras.length > 0 ? 'flex' : 'none';
+}
+
 // ── INIT ──────────────────────────────────────────────────────────────────────
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('n-fecha').value = today();
   initFormDropdowns();
-  initData();
+  await initData();
+  checkMigrateBanner();
 });
 document.addEventListener('click', () => {
   if (_openSpop) { _openSpop.classList.remove('open'); _openSpop = null; }

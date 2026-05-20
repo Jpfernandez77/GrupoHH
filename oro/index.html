@@ -408,6 +408,10 @@
     <!-- ── DASHBOARD ── -->
     <div id="page-dashboard" class="page active">
       <h2>Dashboard</h2>
+      <div id="migrate-banner" style="display:none;background:rgba(224,92,92,.12);border:1px solid var(--red);border-radius:8px;padding:14px 18px;margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;gap:12px">
+        <span style="font-size:14px;color:var(--text)">⚠️ Hay datos locales que no están en la nube.</span>
+        <button class="btn btn-gold btn-sm" onclick="migrarTodo()" id="btn-migrar">☁️ Subir todo a Supabase</button>
+      </div>
       <div class="stats-4" id="stats-strip"></div>
 
       <div class="card" style="margin-bottom:20px">
@@ -1042,6 +1046,41 @@ async function syncImpresiones() {
   }
 }
 
+async function migrarTodo() {
+  const btn = document.getElementById('btn-migrar');
+  btn.textContent = 'Subiendo…'; btn.disabled = true;
+  setSyncStatus('loading');
+  const d = getData();
+  let ok = 0, fail = 0;
+  for (const tanda of d.tandas) {
+    try {
+      await sbFetch('POST', '/rest/v1/tandas',
+        { codigo: tanda.codigo, data: tanda },
+        { 'Prefer': 'resolution=merge-duplicates,return=minimal' });
+      ok++;
+    } catch(e) { console.error('migrar tanda', tanda.codigo, e.message); fail++; }
+  }
+  // sync impresiones (__config__)
+  try { await syncImpresiones(); } catch {}
+  btn.textContent = '☁️ Subir todo a Supabase'; btn.disabled = false;
+  if (fail === 0) {
+    setSyncStatus('ok');
+    document.getElementById('migrate-banner').style.display = 'none';
+    toast(`✓ ${ok} tanda(s) subidas a la nube`);
+  } else {
+    setSyncStatus('error', `${fail} errores`);
+    toast(`⚠ ${ok} ok, ${fail} fallaron — revisa la consola`, 'var(--red)');
+  }
+}
+
+function checkMigrateBanner() {
+  const d = getData();
+  const banner = document.getElementById('migrate-banner');
+  if (!banner) return;
+  // Mostrar solo si hay datos locales (no estamos en incógnito vacío)
+  banner.style.display = d.tandas.length > 0 ? 'flex' : 'none';
+}
+
 // ── nav ───────────────────────────────────────────────────────────────────────
 function showPage(id) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
@@ -1579,6 +1618,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   await initData();
   statusEl.style.display = 'none';
   renderDashboard();
+  checkMigrateBanner();
 });
 
 function toggleKilateRecic() {
