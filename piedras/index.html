@@ -638,13 +638,17 @@ let _tipoActual  = 'individual';
 let _editCodigo  = null;
 
 // ── SUPABASE ──────────────────────────────────────────────────────────────────
-async function sbFetch(method, path, body) {
+async function sbFetch(method, path, body, extraHeaders = {}) {
   const headers = {
     'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY, 'Content-Type': 'application/json',
+    ...extraHeaders,
   };
-  if (method === 'POST') headers['Prefer'] = 'return=minimal';
+  if (method === 'POST' && !extraHeaders['Prefer']) headers['Prefer'] = 'return=minimal';
   const r = await fetch(SB_URL + path, { method, headers, body: body ? JSON.stringify(body) : undefined });
-  if (!r.ok) throw new Error('Supabase ' + r.status);
+  if (!r.ok) {
+    const txt = await r.text().catch(() => '');
+    throw new Error('Supabase ' + r.status + (txt ? ': ' + txt : ''));
+  }
   const text = await r.text();
   return text ? JSON.parse(text) : null;
 }
@@ -654,9 +658,9 @@ async function initData() {
   try { _data = JSON.parse(localStorage.getItem(STORE_KEY)) || { piedras: [] }; }
   catch { _data = { piedras: [] }; }
   renderDashboard();
-  // 2. Sincronizar Supabase en segundo plano
+  // 2. Sincronizar desde Supabase (fuente de verdad)
   try {
-    const rows = await sbFetch('GET', '/rest/v1/piedras?select=data&order=id.asc');
+    const rows = await sbFetch('GET', '/rest/v1/piedras?select=codigo,data&order=id.asc');
     if (rows && rows.length > 0) {
       _data = { piedras: rows.map(r => r.data) };
       saveLocal();
@@ -669,15 +673,22 @@ function loadData()    { return _data; }
 function saveLocal()   { localStorage.setItem(STORE_KEY, JSON.stringify(_data)); }
 function saveData(d)   { _data = d; saveLocal(); }
 
+// Upsert: inserta si no existe, actualiza si ya existe (seguro contra duplicados)
 async function syncGuardar(piedra) {
   saveLocal();
-  try { await sbFetch('POST', '/rest/v1/piedras', { codigo: piedra.codigo, data: piedra }); }
-  catch(e) { console.warn('Sync guardar:', e.message); }
+  try {
+    await sbFetch('POST', '/rest/v1/piedras',
+      { codigo: piedra.codigo, data: piedra },
+      { 'Prefer': 'resolution=merge-duplicates,return=minimal' });
+  } catch(e) { console.warn('Sync guardar:', e.message); }
 }
 async function syncActualizar(piedra) {
   saveLocal();
-  try { await sbFetch('PATCH', `/rest/v1/piedras?codigo=eq.${encodeURIComponent(piedra.codigo)}`, { data: piedra }); }
-  catch(e) { console.warn('Sync actualizar:', e.message); }
+  try {
+    await sbFetch('POST', '/rest/v1/piedras',
+      { codigo: piedra.codigo, data: piedra },
+      { 'Prefer': 'resolution=merge-duplicates,return=minimal' });
+  } catch(e) { console.warn('Sync actualizar:', e.message); }
 }
 async function syncEliminar(codigo) {
   saveLocal();
