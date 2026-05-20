@@ -379,6 +379,10 @@
     <h1>Calculadora de Oro</h1>
     <p>Rendimiento y costos por tanda</p>
   </div>
+  <div id="sync-badge" style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);padding:0 8px">
+    <span id="sync-dot" style="width:8px;height:8px;border-radius:50%;background:var(--muted);flex-shrink:0;transition:background .3s"></span>
+    <span id="sync-txt">Conectando…</span>
+  </div>
   <a href="../" style="display:flex;align-items:center;gap:6px;color:var(--muted);font-size:13px;text-decoration:none;padding:6px 12px;border:1px solid var(--border);border-radius:6px;transition:all .15s" onmouseover="this.style.color='var(--gold-lt)';this.style.borderColor='var(--gold-dk)'" onmouseout="this.style.color='var(--muted)';this.style.borderColor='var(--border)'">
     ← Inicio
   </a>
@@ -925,6 +929,22 @@ function diasTanda(t) {
   return Math.round(ms / 86400000);
 }
 
+function setSyncStatus(status, msg) {
+  const dot = document.getElementById('sync-dot');
+  const txt = document.getElementById('sync-txt');
+  if (!dot || !txt) return;
+  const map = {
+    loading: ['var(--yellow)', 'Sincronizando…'],
+    ok:      ['var(--green)',  '✓ Sincronizado'],
+    error:   ['var(--red)',    '✗ ' + (msg || 'Error sync')],
+    local:   ['var(--muted)', 'Solo local'],
+  };
+  const [color, label] = map[status] || map.local;
+  dot.style.background = color;
+  txt.style.color = color;
+  txt.textContent = label;
+}
+
 async function sbFetch(method, path, body, extraHeaders = {}) {
   const headers = {
     'apikey': SB_KEY,
@@ -938,7 +958,10 @@ async function sbFetch(method, path, body, extraHeaders = {}) {
     headers,
     body: body ? JSON.stringify(body) : undefined,
   });
-  if (!r.ok) throw new Error('Supabase ' + r.status);
+  if (!r.ok) {
+    const txt = await r.text().catch(() => '');
+    throw new Error(`${r.status}${txt ? ': ' + txt.slice(0,120) : ''}`);
+  }
   const text = await r.text();
   return text ? JSON.parse(text) : null;
 }
@@ -950,28 +973,31 @@ async function initData() {
   if (!_data.impresiones) _data.impresiones = [];
   if (typeof _data.ultimo_imp !== 'number') _data.ultimo_imp = 0;
 
+  setSyncStatus('loading');
+
   // 2. Carga desde Supabase (fuente de verdad)
-  // Pedimos codigo + data para poder separar la fila __config__ de las tandas reales
   try {
     const rows = await sbFetch('GET', '/rest/v1/tandas?select=codigo,data&order=id.asc');
     if (rows && rows.length > 0) {
-      const configRow  = rows.find(r => r.codigo === '__config__');
-      const tandaRows  = rows.filter(r => r.codigo !== '__config__');
-
-      const tandas = tandaRows.map(r => r.data);
-      const ultimo = tandas.reduce((max, t) => {
+      const configRow = rows.find(r => r.codigo === '__config__');
+      const tandaRows = rows.filter(r => r.codigo !== '__config__');
+      const tandas    = tandaRows.map(r => r.data);
+      const ultimo    = tandas.reduce((max, t) => {
         const n = parseInt((t.codigo || '').replace('ORO_', '')) || 0;
         return n > max ? n : max;
       }, 0);
-
-      const impresiones = configRow?.data?.impresiones || [];
-      const ultimo_imp  = configRow?.data?.ultimo_imp  || 0;
-
-      _data = { tandas, ultimo, impresiones, ultimo_imp };
+      _data = {
+        tandas,
+        ultimo,
+        impresiones: configRow?.data?.impresiones || [],
+        ultimo_imp:  configRow?.data?.ultimo_imp  || 0,
+      };
       saveLocal();
     }
+    setSyncStatus('ok');
   } catch(e) {
-    console.warn('Supabase no disponible, usando datos locales:', e.message);
+    console.error('Supabase initData:', e.message);
+    setSyncStatus('error', e.message);
   }
 }
 
@@ -979,36 +1005,40 @@ function saveLocal() {
   try { localStorage.setItem(STORE_KEY, JSON.stringify(_data)); } catch {}
 }
 
+// Upsert: crea si no existe, actualiza si ya existe
 async function syncGuardar(tanda) {
   saveLocal();
-  await sbFetch('POST', '/rest/v1/tandas', { codigo: tanda.codigo, data: tanda });
+  await sbFetch('POST', '/rest/v1/tandas',
+    { codigo: tanda.codigo, data: tanda },
+    { 'Prefer': 'resolution=merge-duplicates,return=minimal' }
+  );
+  setSyncStatus('ok');
 }
 
-async function syncCompletar(codigo, completacion) {
+async function syncCompletar(codigo) {
   saveLocal();
   const tanda = getData().tandas.find(t => t.codigo === codigo);
-  if (tanda) await sbFetch('PATCH', `/rest/v1/tandas?codigo=eq.${encodeURIComponent(codigo)}`, { data: tanda });
+  if (!tanda) return;
+  await sbFetch('POST', '/rest/v1/tandas',
+    { codigo: tanda.codigo, data: tanda },
+    { 'Prefer': 'resolution=merge-duplicates,return=minimal' }
+  );
+  setSyncStatus('ok');
 }
 
 async function syncImpresiones() {
   saveLocal();
   const d = getData();
   const configData = { impresiones: d.impresiones || [], ultimo_imp: d.ultimo_imp || 0 };
-  // Intenta PATCH primero; si no hay fila, hace POST
   try {
-    const patched = await sbFetch('PATCH',
-      '/rest/v1/tandas?codigo=eq.__config__',
-      { data: configData },
-      { 'Prefer': 'return=representation' }
+    await sbFetch('POST', '/rest/v1/tandas',
+      { codigo: '__config__', data: configData },
+      { 'Prefer': 'resolution=merge-duplicates,return=minimal' }
     );
-    // PATCH devuelve array vacío si no existe la fila → crear con POST
-    if (!patched || patched.length === 0) {
-      await sbFetch('POST', '/rest/v1/tandas',
-        { codigo: '__config__', data: configData }
-      );
-    }
+    setSyncStatus('ok');
   } catch(e) {
-    console.warn('Error sincronizando impresiones:', e.message);
+    console.error('syncImpresiones:', e.message);
+    setSyncStatus('error', e.message);
   }
 }
 
@@ -1856,7 +1886,7 @@ async function completarTanda() {
   btn.disabled = true;
 
   try {
-    await syncCompletar(codigo, completacion);
+    await syncCompletar(codigo);
     toast(`Tanda ${codigo} completada ✓`);
     refreshSelector();
     showPage('tandas');

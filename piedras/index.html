@@ -244,6 +244,10 @@
     </svg>
   </div>
   <div style="flex:1"><h1>Inventario de Piedras</h1><p>Control de stock · Diamantes</p></div>
+  <div id="sync-badge" style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);padding:0 8px">
+    <span id="sync-dot" style="width:8px;height:8px;border-radius:50%;background:var(--muted);flex-shrink:0;transition:background .3s"></span>
+    <span id="sync-txt">Conectando…</span>
+  </div>
   <a href="../" style="display:flex;align-items:center;gap:6px;color:var(--muted);font-size:13px;text-decoration:none;padding:6px 12px;border:1px solid var(--border);border-radius:6px;transition:all .15s" onmouseover="this.style.color='var(--gold-lt)';this.style.borderColor='var(--gold-dk)'" onmouseout="this.style.color='var(--muted)';this.style.borderColor='var(--border)'">
     ← Inicio
   </a>
@@ -638,6 +642,22 @@ let _tipoActual  = 'individual';
 let _editCodigo  = null;
 
 // ── SUPABASE ──────────────────────────────────────────────────────────────────
+function setSyncStatus(status, msg) {
+  const dot = document.getElementById('sync-dot');
+  const txt = document.getElementById('sync-txt');
+  if (!dot || !txt) return;
+  const map = {
+    loading: ['var(--yellow)', 'Sincronizando…'],
+    ok:      ['var(--green)',  '✓ Sincronizado'],
+    error:   ['var(--red)',    '✗ ' + (msg || 'Error sync')],
+    local:   ['var(--muted)', 'Solo local'],
+  };
+  const [color, label] = map[status] || map.local;
+  dot.style.background = color;
+  txt.style.color = color;
+  txt.textContent = label;
+}
+
 async function sbFetch(method, path, body, extraHeaders = {}) {
   const headers = {
     'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY, 'Content-Type': 'application/json',
@@ -647,7 +667,7 @@ async function sbFetch(method, path, body, extraHeaders = {}) {
   const r = await fetch(SB_URL + path, { method, headers, body: body ? JSON.stringify(body) : undefined });
   if (!r.ok) {
     const txt = await r.text().catch(() => '');
-    throw new Error('Supabase ' + r.status + (txt ? ': ' + txt : ''));
+    throw new Error(`${r.status}${txt ? ': ' + txt.slice(0,120) : ''}`);
   }
   const text = await r.text();
   return text ? JSON.parse(text) : null;
@@ -658,6 +678,7 @@ async function initData() {
   try { _data = JSON.parse(localStorage.getItem(STORE_KEY)) || { piedras: [] }; }
   catch { _data = { piedras: [] }; }
   renderDashboard();
+  setSyncStatus('loading');
   // 2. Sincronizar desde Supabase (fuente de verdad)
   try {
     const rows = await sbFetch('GET', '/rest/v1/piedras?select=codigo,data&order=id.asc');
@@ -666,21 +687,30 @@ async function initData() {
       saveLocal();
       renderDashboard();
     }
-  } catch(e) { console.warn('Supabase no disponible:', e.message); }
+    setSyncStatus('ok');
+  } catch(e) {
+    console.error('Supabase initData:', e.message);
+    setSyncStatus('error', e.message);
+  }
 }
 
 function loadData()    { return _data; }
 function saveLocal()   { localStorage.setItem(STORE_KEY, JSON.stringify(_data)); }
 function saveData(d)   { _data = d; saveLocal(); }
 
-// Upsert: inserta si no existe, actualiza si ya existe (seguro contra duplicados)
+// Upsert: crea si no existe, actualiza si ya existe
 async function syncGuardar(piedra) {
   saveLocal();
   try {
     await sbFetch('POST', '/rest/v1/piedras',
       { codigo: piedra.codigo, data: piedra },
       { 'Prefer': 'resolution=merge-duplicates,return=minimal' });
-  } catch(e) { console.warn('Sync guardar:', e.message); }
+    setSyncStatus('ok');
+  } catch(e) {
+    console.error('Sync guardar:', e.message);
+    setSyncStatus('error', e.message);
+    toast('⚠ No se guardó en la nube: ' + e.message, 'var(--red)');
+  }
 }
 async function syncActualizar(piedra) {
   saveLocal();
@@ -688,12 +718,22 @@ async function syncActualizar(piedra) {
     await sbFetch('POST', '/rest/v1/piedras',
       { codigo: piedra.codigo, data: piedra },
       { 'Prefer': 'resolution=merge-duplicates,return=minimal' });
-  } catch(e) { console.warn('Sync actualizar:', e.message); }
+    setSyncStatus('ok');
+  } catch(e) {
+    console.error('Sync actualizar:', e.message);
+    setSyncStatus('error', e.message);
+    toast('⚠ No se actualizó en la nube: ' + e.message, 'var(--red)');
+  }
 }
 async function syncEliminar(codigo) {
   saveLocal();
-  try { await sbFetch('DELETE', `/rest/v1/piedras?codigo=eq.${encodeURIComponent(codigo)}`); }
-  catch(e) { console.warn('Sync eliminar:', e.message); }
+  try {
+    await sbFetch('DELETE', `/rest/v1/piedras?codigo=eq.${encodeURIComponent(codigo)}`);
+    setSyncStatus('ok');
+  } catch(e) {
+    console.error('Sync eliminar:', e.message);
+    setSyncStatus('error', e.message);
+  }
 }
 
 // ── CONFIG ────────────────────────────────────────────────────────────────────
