@@ -703,7 +703,7 @@ function saveData(d)   { _data = d; saveLocal(); }
 async function syncGuardar(piedra) {
   saveLocal();
   try {
-    await sbFetch('POST', '/rest/v1/piedras',
+    await sbFetch('POST', '/rest/v1/piedras?on_conflict=codigo',
       { codigo: piedra.codigo, data: piedra },
       { 'Prefer': 'resolution=merge-duplicates,return=minimal' });
     setSyncStatus('ok');
@@ -716,7 +716,7 @@ async function syncGuardar(piedra) {
 async function syncActualizar(piedra) {
   saveLocal();
   try {
-    await sbFetch('POST', '/rest/v1/piedras',
+    await sbFetch('POST', '/rest/v1/piedras?on_conflict=codigo',
       { codigo: piedra.codigo, data: piedra },
       { 'Prefer': 'resolution=merge-duplicates,return=minimal' });
     setSyncStatus('ok');
@@ -1555,7 +1555,7 @@ async function migrarTodo() {
   let ok = 0, fail = 0;
   for (const piedra of ps) {
     try {
-      await sbFetch('POST', '/rest/v1/piedras',
+      await sbFetch('POST', '/rest/v1/piedras?on_conflict=codigo',
         { codigo: piedra.codigo, data: piedra },
         { 'Prefer': 'resolution=merge-duplicates,return=minimal' });
       ok++;

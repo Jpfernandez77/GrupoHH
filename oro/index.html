@@ -1009,7 +1009,7 @@ function saveLocal() {
 // Upsert: crea si no existe, actualiza si ya existe
 async function syncGuardar(tanda) {
   saveLocal();
-  await sbFetch('POST', '/rest/v1/tandas',
+  await sbFetch('POST', '/rest/v1/tandas?on_conflict=codigo',
     { codigo: tanda.codigo, data: tanda },
     { 'Prefer': 'resolution=merge-duplicates,return=minimal' }
   );
@@ -1020,7 +1020,7 @@ async function syncCompletar(codigo) {
   saveLocal();
   const tanda = getData().tandas.find(t => t.codigo === codigo);
   if (!tanda) return;
-  await sbFetch('POST', '/rest/v1/tandas',
+  await sbFetch('POST', '/rest/v1/tandas?on_conflict=codigo',
     { codigo: tanda.codigo, data: tanda },
     { 'Prefer': 'resolution=merge-duplicates,return=minimal' }
   );
@@ -1032,7 +1032,7 @@ async function syncImpresiones() {
   const d = getData();
   const configData = { impresiones: d.impresiones || [], ultimo_imp: d.ultimo_imp || 0 };
   try {
-    await sbFetch('POST', '/rest/v1/tandas',
+    await sbFetch('POST', '/rest/v1/tandas?on_conflict=codigo',
       { codigo: '__config__', data: configData },
       { 'Prefer': 'resolution=merge-duplicates,return=minimal' }
     );
