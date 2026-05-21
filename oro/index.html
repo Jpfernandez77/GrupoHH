@@ -623,14 +623,18 @@
         </div>
 
         <div class="card" style="margin-top:0">
-          <h3>Sobrante de Oro 24k</h3>
+          <h3>Oro Restante</h3>
           <div class="grid-2">
             <div class="field">
-              <label>¿Sobró oro 24k? <span style="color:var(--muted);font-weight:400">(gramos físicos sin usar)</span></label>
+              <label>Sobrante 24k <span style="color:var(--muted);font-weight:400">(gramos físicos sin usar)</span></label>
               <input type="number" id="c-sobro-real" placeholder="0.0000" min="0" step="0.0001" value="0" onchange="calcularPreview()" />
             </div>
+            <div class="field">
+              <label>Peso de soportes <span style="color:var(--muted);font-weight:400">(bebederos + árbol, en gramos)</span></label>
+              <input type="number" id="c-soportes" placeholder="0.0000" min="0" step="0.0001" value="0" onchange="calcularPreview()" />
+            </div>
           </div>
-          <p style="font-size:12px;color:var(--muted);margin-top:10px">Este valor se guardará para poder reutilizarlo en futuras tandas.</p>
+          <p style="font-size:12px;color:var(--muted);margin-top:10px">El sobrante 24k quedará disponible para reutilizar en futuras tandas. Los soportes se registran como referencia para el reciclado.</p>
         </div>
 
         <div id="c-preview" class="result-box" style="display:none"></div>
@@ -1808,8 +1812,10 @@ function cargarTandaParaCompletar() {
     document.getElementById(`c-${k}-malas`).value  = 0;
     document.getElementById(`c-${k}-peso`).value   = 0;
   });
-  const sobroEl = document.getElementById('c-sobro-real');
-  if (sobroEl) sobroEl.value = '0';
+  const sobroEl    = document.getElementById('c-sobro-real');
+  const soportesEl = document.getElementById('c-soportes');
+  if (sobroEl)    sobroEl.value    = '0';
+  if (soportesEl) soportesEl.value = '0';
   document.getElementById('c-preview').style.display = 'none';
   formEl.style.display = 'block';
 }
@@ -1840,14 +1846,20 @@ function calcularPreview() {
   if (!totalSalida) { document.getElementById('c-preview').style.display = 'none'; return; }
 
   const sobro_teorico = totalDisp - totalSalida;
-  const sobro_real    = parseFloat(document.getElementById('c-sobro-real')?.value) || 0;
-  const rendimiento   = (totalSalida / totalDisp * 100);
-  const sobroColor    = sobro_real >= 0 ? 'green' : 'red';
+  const sobro_real  = parseFloat(document.getElementById('c-sobro-real')?.value) || 0;
+  const soportes_g  = parseFloat(document.getElementById('c-soportes')?.value)   || 0;
+  const rendimiento = (totalSalida / totalDisp * 100);
 
   const sobroRow = sobro_real > 0.0001 ? `
     <div class="result-row" style="background:rgba(106,175,130,.08);padding:10px 12px;border-radius:6px;margin-top:4px;border:1px solid rgba(106,175,130,.2)">
-      <span class="label" style="font-weight:600;color:var(--text)">☁️ Sobrante 24k que quedará disponible</span>
+      <span class="label" style="font-weight:600;color:var(--text)">💛 Sobrante 24k disponible para reutilizar</span>
       <span class="value" style="color:var(--green);font-size:16px;font-weight:700">${fmtNum(sobro_real, 4)} g</span>
+    </div>` : '';
+
+  const soportesRow = soportes_g > 0.0001 ? `
+    <div class="result-row" style="background:rgba(106,180,240,.06);padding:10px 12px;border-radius:6px;margin-top:4px;border:1px solid rgba(106,180,240,.2)">
+      <span class="label" style="font-weight:600;color:var(--text)">🔩 Peso de soportes (bebederos + árbol)</span>
+      <span class="value" style="color:var(--blue);font-size:16px;font-weight:700">${fmtNum(soportes_g, 4)} g</span>
     </div>` : '';
 
   const box = document.getElementById('c-preview');
@@ -1886,6 +1898,7 @@ function calcularPreview() {
       <span class="value gold">${fmtNum(rendimiento, 1)}%</span>
     </div>
     ${sobroRow}
+    ${soportesRow}
   `;
 }
 
@@ -1912,7 +1925,8 @@ async function completarTanda() {
   });
 
 
-  const sobro_g     = +(parseFloat(document.getElementById('c-sobro-real')?.value) || 0).toFixed(4);
+  const sobro_g         = +(parseFloat(document.getElementById('c-sobro-real')?.value) || 0).toFixed(4);
+  const soportes_g      = +(parseFloat(document.getElementById('c-soportes')?.value)   || 0).toFixed(4);
   const sobro_teorico_g = +(finoEntrada - totalFino).toFixed(4);
 
   const completacion = {
@@ -1921,6 +1935,7 @@ async function completarTanda() {
     total_salida_g:      +totalSalida.toFixed(4),
     total_fino_salida_g: +totalFino.toFixed(4),
     sobro_g,
+    soportes_g,
     sobro_teorico_g,
     kilate_sobro:        24,
     rendimiento_pct:     finoEntrada > 0 ? +(totalFino / finoEntrada * 100).toFixed(2) : 0,
