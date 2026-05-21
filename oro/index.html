@@ -630,8 +630,21 @@
               <input type="number" id="c-sobro-real" placeholder="0.0000" min="0" step="0.0001" value="0" onchange="calcularPreview()" />
             </div>
             <div class="field">
-              <label>Peso de soportes <span style="color:var(--muted);font-weight:400">(bebederos + árbol, en gramos)</span></label>
-              <input type="number" id="c-soportes" placeholder="0.0000" min="0" step="0.0001" value="0" onchange="calcularPreview()" />
+              <label>Soportes por kilataje <span style="color:var(--muted);font-weight:400">(bebederos + árbol)</span></label>
+              <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:4px">
+                <div>
+                  <div style="font-size:11px;color:var(--muted);margin-bottom:4px">10k (g)</div>
+                  <input type="number" id="c-sop-10" placeholder="0" min="0" step="0.0001" value="0" onchange="calcularPreview()" />
+                </div>
+                <div>
+                  <div style="font-size:11px;color:var(--muted);margin-bottom:4px">14k (g)</div>
+                  <input type="number" id="c-sop-14" placeholder="0" min="0" step="0.0001" value="0" onchange="calcularPreview()" />
+                </div>
+                <div>
+                  <div style="font-size:11px;color:var(--muted);margin-bottom:4px">18k (g)</div>
+                  <input type="number" id="c-sop-18" placeholder="0" min="0" step="0.0001" value="0" onchange="calcularPreview()" />
+                </div>
+              </div>
             </div>
           </div>
           <p style="font-size:12px;color:var(--muted);margin-top:10px">El sobrante 24k quedará disponible para reutilizar en futuras tandas. Los soportes se registran como referencia para el reciclado.</p>
@@ -1812,10 +1825,12 @@ function cargarTandaParaCompletar() {
     document.getElementById(`c-${k}-malas`).value  = 0;
     document.getElementById(`c-${k}-peso`).value   = 0;
   });
-  const sobroEl    = document.getElementById('c-sobro-real');
-  const soportesEl = document.getElementById('c-soportes');
-  if (sobroEl)    sobroEl.value    = '0';
-  if (soportesEl) soportesEl.value = '0';
+  const sobroEl = document.getElementById('c-sobro-real');
+  if (sobroEl) sobroEl.value = '0';
+  ['c-sop-10','c-sop-14','c-sop-18'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '0';
+  });
   document.getElementById('c-preview').style.display = 'none';
   formEl.style.display = 'block';
 }
@@ -1846,8 +1861,12 @@ function calcularPreview() {
   if (!totalSalida) { document.getElementById('c-preview').style.display = 'none'; return; }
 
   const sobro_teorico = totalDisp - totalSalida;
-  const sobro_real  = parseFloat(document.getElementById('c-sobro-real')?.value) || 0;
-  const soportes_g  = parseFloat(document.getElementById('c-soportes')?.value)   || 0;
+  const sobro_real = parseFloat(document.getElementById('c-sobro-real')?.value) || 0;
+  const sop10_p    = parseFloat(document.getElementById('c-sop-10')?.value) || 0;
+  const sop14_p    = parseFloat(document.getElementById('c-sop-14')?.value) || 0;
+  const sop18_p    = parseFloat(document.getElementById('c-sop-18')?.value) || 0;
+  const soportes_g = sop10_p + sop14_p + sop18_p;
+  const sop_kilate = soportes_g > 0 ? ((sop10_p*10 + sop14_p*14 + sop18_p*18) / soportes_g) : 0;
   const rendimiento = (totalSalida / totalDisp * 100);
 
   const sobroRow = sobro_real > 0.0001 ? `
@@ -1858,8 +1877,14 @@ function calcularPreview() {
 
   const soportesRow = soportes_g > 0.0001 ? `
     <div class="result-row" style="background:rgba(106,180,240,.06);padding:10px 12px;border-radius:6px;margin-top:4px;border:1px solid rgba(106,180,240,.2)">
-      <span class="label" style="font-weight:600;color:var(--text)">🔩 Peso de soportes (bebederos + árbol)</span>
-      <span class="value" style="color:var(--blue);font-size:16px;font-weight:700">${fmtNum(soportes_g, 4)} g</span>
+      <div style="display:flex;justify-content:space-between;align-items:center;width:100%">
+        <span style="font-weight:600;color:var(--text)">🔩 Soportes (bebederos + árbol)</span>
+        <span style="color:var(--blue);font-size:16px;font-weight:700">${fmtNum(soportes_g, 4)} g</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;width:100%;margin-top:6px">
+        <span style="font-size:12px;color:var(--muted)">${[sop10_p>0?`10k: ${fmtNum(sop10_p,4)}g`:'', sop14_p>0?`14k: ${fmtNum(sop14_p,4)}g`:'', sop18_p>0?`18k: ${fmtNum(sop18_p,4)}g`:''].filter(Boolean).join('  ·  ')}</span>
+        <span style="font-size:13px;color:var(--gold);font-weight:700">≈ ${fmtNum(sop_kilate, 2)}k esperado</span>
+      </div>
     </div>` : '';
 
   const box = document.getElementById('c-preview');
@@ -1926,7 +1951,11 @@ async function completarTanda() {
 
 
   const sobro_g         = +(parseFloat(document.getElementById('c-sobro-real')?.value) || 0).toFixed(4);
-  const soportes_g      = +(parseFloat(document.getElementById('c-soportes')?.value)   || 0).toFixed(4);
+  const sop10 = parseFloat(document.getElementById('c-sop-10')?.value) || 0;
+  const sop14 = parseFloat(document.getElementById('c-sop-14')?.value) || 0;
+  const sop18 = parseFloat(document.getElementById('c-sop-18')?.value) || 0;
+  const soportes_g      = +(sop10 + sop14 + sop18).toFixed(4);
+  const soportes_kilate = soportes_g > 0 ? +((sop10*10 + sop14*14 + sop18*18) / soportes_g).toFixed(2) : 0;
   const sobro_teorico_g = +(finoEntrada - totalFino).toFixed(4);
 
   const completacion = {
@@ -1936,6 +1965,8 @@ async function completarTanda() {
     total_fino_salida_g: +totalFino.toFixed(4),
     sobro_g,
     soportes_g,
+    soportes_kilate,
+    soportes_detalle: { '10': sop10, '14': sop14, '18': sop18 },
     sobro_teorico_g,
     kilate_sobro:        24,
     rendimiento_pct:     finoEntrada > 0 ? +(totalFino / finoEntrada * 100).toFixed(2) : 0,
