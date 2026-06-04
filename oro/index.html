@@ -1684,8 +1684,8 @@ function actualizarPreviewNueva() {
   const pctSobrante  = totalFino > 0 ? (finoSobrante / totalFino * 100) : 0;
   const pctRecic     = totalFino > 0 ? (finoRecic    / totalFino * 100) : 0;
 
-  const barRecic = finoRecic > 0 ? `<div style="height:100%;width:${pctRecic.toFixed(1)}%;background:var(--blue);border-radius:0 4px 4px 0"></div>` : '';
-  const barSob   = finoSobrante > 0 ? `<div style="height:100%;width:${pctSobrante.toFixed(1)}%;background:var(--teal)"></div>` : '';
+  const barRecic = finoRecic > 0 ? `<div style="height:100%;width:${pctRecic.toFixed(1)}%;background:#3a7d44;border-radius:0 4px 4px 0"></div>` : '';
+  const barSob   = finoSobrante > 0 ? `<div style="height:100%;width:${pctSobrante.toFixed(1)}%;background:var(--blue)"></div>` : '';
 
   const filas = [
     pedido > 0      ? `<div class="result-row">
