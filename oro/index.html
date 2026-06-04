@@ -1084,32 +1084,66 @@ async function initData() {
 
   setSyncStatus('loading');
 
-  // 2. Carga desde Supabase (fuente de verdad)
+  // 2. Carga desde Supabase — tandas e impresiones en paralelo
   try {
-    const rows = await sbFetch('GET', '/rest/v1/tandas?select=codigo,data&order=id.asc');
-    if (rows && rows.length > 0) {
-      const configRow = rows.find(r => r.codigo === '__config__');
-      const tandaRows = rows.filter(r => r.codigo !== '__config__');
-      const tandas    = tandaRows.map(r => r.data);
-      const ultimo    = tandas.reduce((max, t) => {
-        const n = parseInt((t.codigo || '').replace('ORO_', '')) || 0;
-        return n > max ? n : max;
-      }, 0);
-      _data = {
-        tandas,
-        ultimo,
-        impresiones:           configRow?.data?.impresiones            || [],
-        ultimo_imp:            configRow?.data?.ultimo_imp             || 0,
-        historial_calibracion: configRow?.data?.historial_calibracion  || [],
-        multiplicadores:       configRow?.data?.multiplicadores        || null,
-      };
-      saveLocal();
+    const [rows, impRows] = await Promise.all([
+      sbFetch('GET', '/rest/v1/tandas?select=codigo,data&order=id.asc'),
+      sbFetch('GET', '/rest/v1/impresiones?select=codigo,data&order=id.asc').catch(() => null),
+    ]);
+
+    const configRow = (rows || []).find(r => r.codigo === '__config__');
+    const tandaRows = (rows || []).filter(r => r.codigo !== '__config__');
+    const tandas    = tandaRows.map(r => r.data);
+    const ultimo    = tandas.reduce((max, t) => {
+      const n = parseInt((t.codigo || '').replace('ORO_', '')) || 0;
+      return n > max ? n : max;
+    }, 0);
+
+    // Impresiones: tabla dedicada tiene prioridad sobre el __config__ legacy
+    const impsFromTable  = (impRows || []).map(r => r.data).filter(Boolean);
+    const impsFromConfig = configRow?.data?.impresiones || [];
+    const finalImps      = impsFromTable.length > 0 ? impsFromTable : impsFromConfig;
+
+    // Migración automática: si la tabla existe (impRows !== null) pero está vacía
+    // y hay datos en config, los copiamos a la tabla
+    if (impRows !== null && impsFromTable.length === 0 && impsFromConfig.length > 0) {
+      migrarImpresionesATabla(impsFromConfig).catch(() => {});
     }
+
+    const ultimoImp = finalImps.reduce((max, i) => {
+      const n = parseInt((i.codigo || '').replace('IMP-', '')) || 0;
+      return n > max ? n : max;
+    }, 0);
+
+    _data = {
+      tandas,
+      ultimo,
+      impresiones:           finalImps,
+      ultimo_imp:            Math.max(ultimoImp, configRow?.data?.ultimo_imp || 0),
+      historial_calibracion: configRow?.data?.historial_calibracion || [],
+      multiplicadores:       configRow?.data?.multiplicadores       || null,
+    };
+    saveLocal();
     setSyncStatus('ok');
   } catch(e) {
     console.error('Supabase initData:', e.message);
     setSyncStatus('error', e.message);
   }
+}
+
+// Migración automática: copia impresiones del __config__ a la tabla dedicada
+async function migrarImpresionesATabla(imps) {
+  console.log(`Migrando ${imps.length} impresion(es) a tabla dedicada…`);
+  for (const imp of imps) {
+    if (!imp.codigo) continue;
+    try {
+      await sbFetch('POST', '/rest/v1/impresiones?on_conflict=codigo',
+        { codigo: imp.codigo, data: imp },
+        { 'Prefer': 'resolution=merge-duplicates,return=minimal' }
+      );
+    } catch(e) { console.warn('migrar imp', imp.codigo, e.message); }
+  }
+  console.log('Migración de impresiones completa.');
 }
 
 function saveLocal() {
@@ -1137,11 +1171,26 @@ async function syncCompletar(codigo) {
   setSyncStatus('ok');
 }
 
+// Guarda/actualiza una impresión individual en la tabla dedicada
+async function syncGuardarImpresion(imp) {
+  saveLocal();
+  await sbFetch('POST', '/rest/v1/impresiones?on_conflict=codigo',
+    { codigo: imp.codigo, data: imp },
+    { 'Prefer': 'resolution=merge-duplicates,return=minimal' }
+  );
+  setSyncStatus('ok');
+}
+
+// Elimina una impresión de la tabla dedicada
+async function syncEliminarImpresion(codigo) {
+  await sbFetch('DELETE', `/rest/v1/impresiones?codigo=eq.${encodeURIComponent(codigo)}`);
+}
+
+// Guarda en __config__ solo los datos de calibración (ya NO guarda impresiones aquí)
 async function syncImpresiones() {
   saveLocal();
   const d = getData();
   const configData = {
-    impresiones:           d.impresiones            || [],
     ultimo_imp:            d.ultimo_imp             || 0,
     historial_calibracion: d.historial_calibracion  || [],
     multiplicadores:       d.multiplicadores        || null,
@@ -2822,6 +2871,12 @@ function guardarImpresion() {
 
   d.impresiones.push(imp);
   saveLocal();
+  // Sincronizar impresión a su tabla dedicada
+  syncGuardarImpresion(imp).catch(e => {
+    console.error('sync imp:', e.message);
+    setSyncStatus('error', e.message);
+  });
+  // Actualizar ultimo_imp en __config__
   syncImpresiones().catch(() => {});
 
   toast(`${codigo} — "${nombre}" guardada ✓`);
@@ -2856,9 +2911,11 @@ function limpiarImpresion() {
 function eliminarImpresion(id) {
   if (!confirm('¿Eliminar esta impresión?')) return;
   const d = getData();
+  const imp = d.impresiones.find(i => i.id === id);
   d.impresiones = d.impresiones.filter(i => i.id !== id);
   saveLocal();
-  syncImpresiones().catch(() => {});
+  if (imp?.codigo) syncEliminarImpresion(imp.codigo).catch(() => {});
+  syncImpresiones().catch(() => {}); // actualizar ultimo_imp
   renderImpresiones();
   toast('Impresión eliminada', 'var(--red)');
 }
