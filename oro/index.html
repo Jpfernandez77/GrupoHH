@@ -698,12 +698,32 @@
         <div class="grid-2" style="margin-top:14px">
           <div class="field">
             <label>Material</label>
-            <select id="imp-material">
+            <select id="imp-material" onchange="calcImpGoldEstimate()">
               <option value="resina">Resina</option>
               <option value="cera">Cera</option>
             </select>
           </div>
         </div>
+
+        <hr style="border:none;border-top:1px solid var(--border);margin:20px 0">
+        <!-- Calculadora de oro -->
+        <div class="section-label">Estimado de Oro</div>
+        <div class="grid-2">
+          <div class="field">
+            <label>Peso del modelo <span style="color:var(--muted);font-weight:400">(g)</span></label>
+            <input type="number" id="imp-peso-resina" placeholder="0.00" min="0" step="0.01" oninput="calcImpGoldEstimate()" />
+          </div>
+          <div class="field">
+            <label>Kilataje objetivo</label>
+            <select id="imp-kilate-obj" onchange="calcImpGoldEstimate()">
+              <option value="">— Sin especificar —</option>
+              <option value="10">10k</option>
+              <option value="14">14k</option>
+              <option value="18">18k</option>
+            </select>
+          </div>
+        </div>
+        <div id="imp-gold-estimate" style="display:none;margin-top:12px"></div>
 
         <hr style="border:none;border-top:1px solid var(--border);margin:20px 0">
         <!-- Producción -->
@@ -780,8 +800,9 @@
     <div id="page-calculadora" class="page">
       <h2>Calculadora de Material</h2>
       <p style="color:var(--muted);font-size:13px;margin-top:-16px;margin-bottom:24px">
-        Fórmula: gramos de oro = quilate × peso de la resina
+        Fórmula: gramos de oro = multiplicador × peso del modelo. Se corrige automáticamente con vaciados reales.
       </p>
+      <div id="calc-calibracion" class="card" style="margin-bottom:20px"></div>
 
       <!-- Parámetros compartidos -->
       <div class="card" style="margin-bottom:20px">
@@ -943,11 +964,42 @@ const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJ
 // ── caché en memoria ──────────────────────────────────────────────────────────
 let _data = null;
 
+const MULT_DEFAULT = { '10': 10, '14': 14, '18': 18 };
+
 function getData() {
   const d = _data || { tandas: [], ultimo: 0, impresiones: [], ultimo_imp: 0 };
-  if (!d.impresiones) d.impresiones = [];
+  if (!d.impresiones)            d.impresiones = [];
   if (typeof d.ultimo_imp !== 'number') d.ultimo_imp = 0;
+  if (!d.historial_calibracion)  d.historial_calibracion = [];
+  if (!d.multiplicadores)        d.multiplicadores = {
+    resina: { '10': 10, '14': 14, '18': 18 },
+    cera:   { '10': 10, '14': 14, '18': 18 },
+  };
   return d;
+}
+
+// Devuelve { mult, n, isLearned } para material+kilate
+function getMultInfo(material, kilate) {
+  const hist = getData().historial_calibracion
+    .filter(h => h.material === material && h.kilate === kilate)
+    .slice(-10);
+  if (!hist.length) return { mult: MULT_DEFAULT[kilate], n: 0, isLearned: false };
+  const avg = hist.reduce((s, h) => s + h.ratio, 0) / hist.length;
+  return { mult: +avg.toFixed(4), n: hist.length, isLearned: true };
+}
+
+// Registra un punto de calibración y actualiza el multiplicador guardado
+function registrarCalibracion(material, kilate, peso_resina_g, peso_real_g, imp_codigo) {
+  const d = getData();
+  const ratio = +(peso_real_g / peso_resina_g).toFixed(4);
+  d.historial_calibracion.push({ fecha: today(), imp_codigo, material, kilate, peso_resina_g, peso_real_g, ratio });
+  // Actualiza multiplicador (promedio de las últimas 10)
+  const hist = d.historial_calibracion.filter(h => h.material === material && h.kilate === kilate).slice(-10);
+  const avg  = hist.reduce((s, h) => s + h.ratio, 0) / hist.length;
+  d.multiplicadores[material][kilate] = +avg.toFixed(4);
+  _data = d;
+  saveLocal();
+  syncImpresiones().catch(() => {});
 }
 
 // Oro puro (24k equiv) total de una tanda:
@@ -1027,8 +1079,10 @@ async function initData() {
       _data = {
         tandas,
         ultimo,
-        impresiones: configRow?.data?.impresiones || [],
-        ultimo_imp:  configRow?.data?.ultimo_imp  || 0,
+        impresiones:           configRow?.data?.impresiones            || [],
+        ultimo_imp:            configRow?.data?.ultimo_imp             || 0,
+        historial_calibracion: configRow?.data?.historial_calibracion  || [],
+        multiplicadores:       configRow?.data?.multiplicadores        || null,
       };
       saveLocal();
     }
@@ -1067,7 +1121,12 @@ async function syncCompletar(codigo) {
 async function syncImpresiones() {
   saveLocal();
   const d = getData();
-  const configData = { impresiones: d.impresiones || [], ultimo_imp: d.ultimo_imp || 0 };
+  const configData = {
+    impresiones:           d.impresiones            || [],
+    ultimo_imp:            d.ultimo_imp             || 0,
+    historial_calibracion: d.historial_calibracion  || [],
+    multiplicadores:       d.multiplicadores        || null,
+  };
   try {
     await sbFetch('POST', '/rest/v1/tandas?on_conflict=codigo',
       { codigo: '__config__', data: configData },
@@ -1126,7 +1185,7 @@ function showPage(id) {
   if (id === 'tandas')       renderAllTandas();
   if (id === 'reportes')     initReportes();
   if (id === 'impresiones')  renderImpresiones();
-  if (id === 'calculadora')  calcularMaterial();
+  if (id === 'calculadora')  { renderCalibCard(); calcularMaterial(); }
 }
 
 // ── helpers ───────────────────────────────────────────────────────────────────
@@ -2020,6 +2079,20 @@ async function completarTanda() {
   t.estado       = 'completada';
   t.completacion = completacion;
 
+  // ── Aprendizaje automático ────────────────────────────────────────────────
+  // Si la tanda tiene impresión vinculada con peso_resina_g, registrar calibración
+  if (t.impresion_vinculada) {
+    const d2  = getData();
+    const imp = d2.impresiones.find(i => i.codigo === t.impresion_vinculada);
+    if (imp?.peso_resina_g > 0 && imp?.kilate_objetivo) {
+      const k       = imp.kilate_objetivo;
+      const pesoReal = completacion.produccion[k]?.peso_g || 0;
+      if (pesoReal > 0) {
+        registrarCalibracion(imp.material || 'resina', k, imp.peso_resina_g, pesoReal, imp.codigo);
+      }
+    }
+  }
+
   const btn = document.querySelector('#c-form .btn-gold');
   btn.textContent = 'Guardando…';
   btn.disabled = true;
@@ -2352,10 +2425,40 @@ async function cambiarEstado(codigo, nuevoEstado) {
 }
 
 // ── CALCULADORA DE MATERIAL ───────────────────────────────────────────────────
+function renderCalibCard() {
+  const el = document.getElementById('calc-calibracion');
+  if (!el) return;
+  const mats = ['resina','cera'];
+  const ks   = ['10','14','18'];
+  let rows = '';
+  mats.forEach(mat => {
+    ks.forEach(k => {
+      const { mult, n, isLearned } = getMultInfo(mat, k);
+      const def     = MULT_DEFAULT[k];
+      const diffPct = ((mult - def) / def * 100);
+      const badge   = isLearned
+        ? `<span style="background:rgba(106,175,130,.15);color:var(--green);border:1px solid rgba(106,175,130,.3);border-radius:12px;padding:2px 8px;font-size:11px">✓ ${n} vaciado${n>1?'s':''}</span>`
+        : `<span style="background:rgba(138,128,112,.1);color:var(--muted);border:1px solid var(--border);border-radius:12px;padding:2px 8px;font-size:11px">Sin datos</span>`;
+      const corrStr = isLearned && Math.abs(diffPct) > 0.5
+        ? `<span style="font-size:11px;color:${Math.abs(diffPct)>5?'var(--yellow)':'var(--muted)'}"> (${diffPct>=0?'+':''}${diffPct.toFixed(1)}% vs base ${def}×)</span>`
+        : '';
+      rows += `<div style="display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-bottom:1px solid rgba(255,255,255,.04);font-size:13px">
+        <span style="color:var(--muted);min-width:120px">${mat.charAt(0).toUpperCase()+mat.slice(1)} — ${k}k</span>
+        <span style="font-family:monospace;font-weight:700;color:var(--gold-lt)">${mult}×${corrStr}</span>
+        ${badge}
+      </div>`;
+    });
+  });
+  el.innerHTML = `<h3 style="margin-bottom:14px">📐 Multiplicadores Aprendidos</h3>${rows}
+    <p style="font-size:11px;color:var(--muted);margin-top:12px">Se actualizan automáticamente al completar tandas vinculadas a impresiones con peso de modelo registrado.</p>`;
+}
+
 function calcularMaterial() {
+  renderCalibCard();
   const desperdicioP = parseFloat(document.getElementById('calc-desperdicio').value) || 0;
   const precio       = parseFloat(document.getElementById('calc-precio').value)       || 0;
   const factorDesp   = 1 + desperdicioP / 100;
+  const mat          = 'resina'; // calculadora usa resina por defecto
 
   const karats = [
     { k: 10, id: '10', accent: 'var(--gold)' },
@@ -2373,7 +2476,12 @@ function calcularMaterial() {
     if (!resina) { resultEl.innerHTML = ''; return; }
     activos++;
 
-    const oroBase    = k * resina;
+    const { mult, n, isLearned } = getMultInfo(mat, String(k));
+    const multLabel = isLearned
+      ? `<span style="font-size:11px;color:var(--green)"> ✓ mult. aprendido ${mult}× (${n} real${n>1?'es':''})</span>`
+      : `<span style="font-size:11px;color:var(--muted)"> (fórmula base ${mult}×)</span>`;
+
+    const oroBase    = mult * resina;
     const oroConDesp = oroBase * factorDesp;
     const oroFino    = oroConDesp * (k / 24);
     const costo      = precio > 0 ? oroFino * precio : 0;
@@ -2386,7 +2494,7 @@ function calcularMaterial() {
 
     html += `
       <div class="result-row" style="padding:5px 0">
-        <span class="label">Oro ${k}k necesario</span>
+        <span class="label">Oro ${k}k necesario${multLabel}</span>
         <span class="value" style="color:${accent};font-size:20px;font-weight:700">${fmtNum(oroBase)} g</span>
       </div>`;
 
@@ -2457,6 +2565,41 @@ async function syncActualizar(tanda) {
 }
 
 // ── IMPRESIONES ───────────────────────────────────────────────────────────────
+function calcImpGoldEstimate() {
+  const peso   = parseFloat(document.getElementById('imp-peso-resina')?.value) || 0;
+  const kilate = document.getElementById('imp-kilate-obj')?.value;
+  const mat    = document.getElementById('imp-material')?.value || 'resina';
+  const el     = document.getElementById('imp-gold-estimate');
+  if (!el) return;
+  if (!peso || !kilate) { el.style.display = 'none'; return; }
+
+  const { mult, n, isLearned } = getMultInfo(mat, kilate);
+  const estimado  = peso * mult;
+  const defMult   = MULT_DEFAULT[kilate];
+  const diffPct   = ((mult - defMult) / defMult * 100);
+  const diffStr   = isLearned
+    ? `<span style="color:${Math.abs(diffPct)>1?'var(--yellow)':'var(--green)'}">
+        (${diffPct >= 0 ? '+' : ''}${diffPct.toFixed(1)}% vs fórmula base ${defMult}×)
+       </span>`
+    : `<span style="color:var(--muted)">fórmula base — sin datos reales aún</span>`;
+
+  el.style.display = 'block';
+  el.innerHTML = `
+    <div style="background:rgba(196,168,130,.08);border:1px solid rgba(196,168,130,.2);border-radius:8px;padding:14px 16px">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <span style="font-size:13px;color:var(--muted)">Oro ${kilate}k estimado necesario</span>
+        <span style="font-size:22px;font-weight:700;color:var(--gold-lt)">${fmtNum(estimado,2)} g</span>
+      </div>
+      <div style="font-size:12px;color:var(--muted);margin-top:8px;line-height:1.7">
+        ${fmtNum(peso,2)} g ${mat} × <strong style="color:var(--text)">${mult}×</strong> = ${fmtNum(estimado,2)} g &nbsp;·&nbsp;
+        ${isLearned
+          ? `✓ <span style="color:var(--green)">Aprendido de ${n} vaciado${n>1?'s':''} real${n>1?'es':''}</span> ${diffStr}`
+          : diffStr
+        }
+      </div>
+    </div>`;
+}
+
 function calcImpPreview() {
   const total = parseFloat(document.getElementById('imp-total').value) || 0;
   const costo = parseFloat(document.getElementById('imp-costo').value) || 0;
@@ -2530,10 +2673,18 @@ function guardarImpresion() {
 
   const cpp_buena = buen > 0 ? costo / buen : null;
 
+  const pesoResina   = parseFloat(document.getElementById('imp-peso-resina')?.value) || 0;
+  const kilateObj    = document.getElementById('imp-kilate-obj')?.value || null;
+  const { mult: multUsado } = kilateObj ? getMultInfo(material, kilateObj) : { mult: null };
+  const estimadoG    = (pesoResina > 0 && kilateObj) ? +(pesoResina * multUsado).toFixed(4) : null;
+
   const imp = {
     id:                    'IMP-' + fecha.replace(/-/g,'') + '-' + Date.now(),
     codigo,
     fecha, nombre, material,
+    peso_resina_g:         pesoResina || null,
+    kilate_objetivo:       kilateObj,
+    estimado_g:            estimadoG,
     total_piezas:          total,
     costo_total:           costo,
     costo_por_pieza:       +(costo / total).toFixed(4),
@@ -2562,6 +2713,12 @@ function limpiarImpresion() {
   document.getElementById('imp-preview').style.display = 'none';
   document.getElementById('imp-resultado-preview').style.display = 'none';
   document.getElementById('imp-error').style.display = 'none';
+  const pesoEl   = document.getElementById('imp-peso-resina');
+  const kilateEl = document.getElementById('imp-kilate-obj');
+  const estEl    = document.getElementById('imp-gold-estimate');
+  if (pesoEl)   pesoEl.value = '';
+  if (kilateEl) kilateEl.value = '';
+  if (estEl)    estEl.style.display = 'none';
   updateImpCodigoPreview();
 }
 
