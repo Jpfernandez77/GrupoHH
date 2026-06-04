@@ -19,6 +19,8 @@
       --muted:   #8a8070;
       --green:   #6aaf82;
       --red:     #e05c5c;
+      --blue:    #6ab4f0;
+      --yellow:  #f0c84a;
     }
 
     body {
@@ -517,8 +519,12 @@
             </div>
           </div>
           <div class="field" style="grid-column:1/-1">
-            <label>Costo total ($)</label>
+            <label>Costo total del oro ($)</label>
             <input type="number" id="n-costo" placeholder="0.00" min="0" step="0.01" style="max-width:260px" />
+          </div>
+          <div class="field" style="grid-column:1/-1">
+            <label>Costo de vaciado ($) <span style="color:var(--muted);font-weight:400">(opcional — servicio de fundición)</span></label>
+            <input type="number" id="n-costo-vaciado" placeholder="0.00" min="0" step="0.01" style="max-width:260px" />
           </div>
         </div>
       </div>
@@ -698,7 +704,7 @@
         <div class="grid-2" style="margin-top:14px">
           <div class="field">
             <label>Material</label>
-            <select id="imp-material" onchange="calcImpGoldEstimate()">
+            <select id="imp-material" onchange="calcImpKaratesAll()">
               <option value="resina">Resina</option>
               <option value="cera">Cera</option>
             </select>
@@ -706,77 +712,86 @@
         </div>
 
         <hr style="border:none;border-top:1px solid var(--border);margin:20px 0">
-        <!-- Calculadora de oro -->
-        <div class="section-label">Estimado de Oro</div>
-        <div class="grid-2">
-          <div class="field">
-            <label>Peso del modelo <span style="color:var(--muted);font-weight:400">(g)</span></label>
-            <input type="number" id="imp-peso-resina" placeholder="0.00" min="0" step="0.01" oninput="calcImpGoldEstimate()" />
+        <!-- Distribución por kilataje -->
+        <div class="section-label">Distribución por Kilataje</div>
+        <div class="karat-grid">
+          <div class="karat-card">
+            <h4>🔸 Oro 10k</h4>
+            <div class="field"><label>Piezas impresas</label>
+              <input type="number" id="imp-10k-total" placeholder="0" min="0" step="1" oninput="calcImpKarat('10')" /></div>
+            <div class="field mt-16"><label>✅ Piezas buenas</label>
+              <input type="number" id="imp-10k-buenas" placeholder="0" min="0" step="1" oninput="calcImpKarat('10')" /></div>
+            <div class="field mt-16"><label>❌ Piezas rotas</label>
+              <input type="number" id="imp-10k-rotas" placeholder="0" min="0" step="1" oninput="calcImpKarat('10')" /></div>
+            <div class="field mt-16"><label>Peso modelo (g)</label>
+              <input type="number" id="imp-10k-peso" placeholder="0.00" min="0" step="0.01" oninput="calcImpKarat('10')" /></div>
+            <div id="imp-10k-estimate" style="margin-top:8px"></div>
           </div>
-          <div class="field">
-            <label>Kilataje objetivo</label>
-            <select id="imp-kilate-obj" onchange="calcImpGoldEstimate()">
-              <option value="">— Sin especificar —</option>
-              <option value="10">10k</option>
-              <option value="14">14k</option>
-              <option value="18">18k</option>
-            </select>
+          <div class="karat-card">
+            <h4>🔶 Oro 14k</h4>
+            <div class="field"><label>Piezas impresas</label>
+              <input type="number" id="imp-14k-total" placeholder="0" min="0" step="1" oninput="calcImpKarat('14')" /></div>
+            <div class="field mt-16"><label>✅ Piezas buenas</label>
+              <input type="number" id="imp-14k-buenas" placeholder="0" min="0" step="1" oninput="calcImpKarat('14')" /></div>
+            <div class="field mt-16"><label>❌ Piezas rotas</label>
+              <input type="number" id="imp-14k-rotas" placeholder="0" min="0" step="1" oninput="calcImpKarat('14')" /></div>
+            <div class="field mt-16"><label>Peso modelo (g)</label>
+              <input type="number" id="imp-14k-peso" placeholder="0.00" min="0" step="0.01" oninput="calcImpKarat('14')" /></div>
+            <div id="imp-14k-estimate" style="margin-top:8px"></div>
+          </div>
+          <div class="karat-card">
+            <h4>🟡 Oro 18k</h4>
+            <div class="field"><label>Piezas impresas</label>
+              <input type="number" id="imp-18k-total" placeholder="0" min="0" step="1" oninput="calcImpKarat('18')" /></div>
+            <div class="field mt-16"><label>✅ Piezas buenas</label>
+              <input type="number" id="imp-18k-buenas" placeholder="0" min="0" step="1" oninput="calcImpKarat('18')" /></div>
+            <div class="field mt-16"><label>❌ Piezas rotas</label>
+              <input type="number" id="imp-18k-rotas" placeholder="0" min="0" step="1" oninput="calcImpKarat('18')" /></div>
+            <div class="field mt-16"><label>Peso modelo (g)</label>
+              <input type="number" id="imp-18k-peso" placeholder="0.00" min="0" step="0.01" oninput="calcImpKarat('18')" /></div>
+            <div id="imp-18k-estimate" style="margin-top:8px"></div>
           </div>
         </div>
-        <div id="imp-gold-estimate" style="display:none;margin-top:12px"></div>
+        <!-- Totales automáticos -->
+        <div id="imp-karat-totales" style="display:none;margin-top:12px"></div>
 
         <hr style="border:none;border-top:1px solid var(--border);margin:20px 0">
-        <!-- Producción -->
-        <div class="section-label">Producción y Costos</div>
+        <!-- Costos -->
+        <div class="section-label">Costos</div>
         <div class="grid-2">
           <div class="field">
-            <label>Total de piezas impresas</label>
-            <input type="number" id="imp-total" placeholder="0" min="1" step="1" oninput="calcImpPreview()" />
-          </div>
-          <div class="field">
             <label>Costo total de impresión ($)</label>
-            <input type="number" id="imp-costo" placeholder="0.00" min="0" step="0.01" oninput="calcImpPreview()" />
+            <input type="number" id="imp-costo" placeholder="0.00" min="0" step="0.01" oninput="calcImpKaratesAll()" />
           </div>
         </div>
-
-        <!-- Preview costo/pieza -->
+        <!-- Preview costos -->
         <div class="calc-preview" id="imp-preview" style="display:none;margin-top:12px">
           <div class="cp-item">
             <span class="cp-val" id="prev-cpp">—</span>
             <span class="cp-lbl">Costo por pieza</span>
           </div>
-        </div>
-
-        <hr style="border:none;border-top:1px solid var(--border);margin:20px 0">
-        <!-- Resultado -->
-        <div class="section-label">Resultado de la Impresión</div>
-        <div class="grid-2">
-          <div class="field">
-            <label>✅ Piezas buenas</label>
-            <input type="number" id="imp-buenas" placeholder="0" min="0" step="1" oninput="calcImpResultado()" />
+          <div class="cp-item">
+            <span class="cp-val" id="prev-cpp-real">—</span>
+            <span class="cp-lbl">Costo / pieza buena</span>
           </div>
-          <div class="field">
-            <label>❌ Piezas rotas / con defecto</label>
-            <input type="number" id="imp-rotas" placeholder="0" min="0" step="1" oninput="calcImpResultado()" />
-          </div>
-        </div>
-
-        <!-- Preview resultado -->
-        <div class="calc-preview" id="imp-resultado-preview" style="display:none;margin-top:12px">
           <div class="cp-item">
             <span class="cp-val" id="prev-exito" style="color:var(--green)">—</span>
             <span class="cp-lbl">Tasa de éxito</span>
             <div class="pct-bar-wrap"><div class="pct-bar-fill" id="prev-bar" style="background:var(--green)"></div></div>
           </div>
           <div class="cp-item">
-            <span class="cp-val" id="prev-cpp-real">—</span>
-            <span class="cp-lbl">Costo real / pieza buena</span>
-          </div>
-          <div class="cp-item">
             <span class="cp-val" id="prev-perdida" style="color:var(--red)">—</span>
-            <span class="cp-lbl">Costo perdido en defectos</span>
+            <span class="cp-lbl">Costo en defectos</span>
           </div>
         </div>
+        <!-- Campos ocultos para compatibilidad -->
+        <input type="hidden" id="imp-total" />
+        <input type="hidden" id="imp-buenas" />
+        <input type="hidden" id="imp-rotas" />
+        <input type="hidden" id="imp-peso-resina" />
+        <input type="hidden" id="imp-kilate-obj" />
+        <div id="imp-resultado-preview" style="display:none"></div>
+        <div id="imp-gold-estimate" style="display:none"></div>
 
         <hr style="border:none;border-top:1px solid var(--border);margin:20px 0">
         <div class="field">
@@ -911,8 +926,12 @@
           <input type="number" id="e-pedido" min="0" step="0.01" />
         </div>
         <div class="field">
-          <label>Costo total ($)</label>
+          <label>Costo total del oro ($)</label>
           <input type="number" id="e-costo" min="0" step="0.01" />
+        </div>
+        <div class="field">
+          <label>Costo de vaciado ($) <span style="color:var(--muted);font-weight:400">(opcional)</span></label>
+          <input type="number" id="e-costo-vaciado" min="0" step="0.01" placeholder="0.00" />
         </div>
         <div class="field">
           <label>Gramos reciclados</label>
@@ -1832,12 +1851,14 @@ async function registrarTanda() {
     const origenSobrant = document.getElementById('n-origen-reciclado')?.value || null;
     const sobrante24k   = parseFloat(document.getElementById('n-sobrante-anterior')?.value) || 0;
     const cliente       = document.getElementById('n-cliente')?.value.trim() || null;
+    const costoVaciado = parseFloat(document.getElementById('n-costo-vaciado')?.value) || 0;
     const tanda = {
       codigo:               `ORO_${String(d.tandas.length + 1).padStart(8,'0')}`,
       fecha,
       oro_pedido_g:         pedido,
       kilate_pedido:        '24',
       costo_total:          costo,
+      costo_vaciado:        costoVaciado,
       oro_fino_comprado_g:  +pedido.toFixed(4),
       costo_g_24k:          +(costo / pedido).toFixed(4),
       sobrante_anterior_g:  sobrante24k,
@@ -1884,6 +1905,8 @@ function limpiarNueva() {
   if (sobrEl) sobrEl.value = '0';
   const clienteEl = document.getElementById('n-cliente');
   if (clienteEl) clienteEl.value = '';
+  const vaciadoEl = document.getElementById('n-costo-vaciado');
+  if (vaciadoEl) vaciadoEl.value = '';
 }
 
 // ── COMPLETAR TANDA ───────────────────────────────────────────────────────────
@@ -2080,15 +2103,28 @@ async function completarTanda() {
   t.completacion = completacion;
 
   // ── Aprendizaje automático ────────────────────────────────────────────────
-  // Si la tanda tiene impresión vinculada con peso_resina_g, registrar calibración
   if (t.impresion_vinculada) {
     const d2  = getData();
     const imp = d2.impresiones.find(i => i.codigo === t.impresion_vinculada);
-    if (imp?.peso_resina_g > 0 && imp?.kilate_objetivo) {
-      const k       = imp.kilate_objetivo;
-      const pesoReal = completacion.produccion[k]?.peso_g || 0;
-      if (pesoReal > 0) {
-        registrarCalibracion(imp.material || 'resina', k, imp.peso_resina_g, pesoReal, imp.codigo);
+    if (imp) {
+      if (imp.kilates) {
+        // Nueva estructura por kilataje
+        ['10','14','18'].forEach(k => {
+          const kd = imp.kilates[k];
+          if (kd?.peso_resina_g > 0) {
+            const pesoReal = completacion.produccion[k]?.peso_g || 0;
+            if (pesoReal > 0) {
+              registrarCalibracion(imp.material || 'resina', k, kd.peso_resina_g, pesoReal, imp.codigo);
+            }
+          }
+        });
+      } else if (imp.peso_resina_g > 0 && imp.kilate_objetivo) {
+        // Estructura antigua (compatibilidad)
+        const k = imp.kilate_objetivo;
+        const pesoReal = completacion.produccion[k]?.peso_g || 0;
+        if (pesoReal > 0) {
+          registrarCalibracion(imp.material || 'resina', k, imp.peso_resina_g, pesoReal, imp.codigo);
+        }
       }
     }
   }
@@ -2133,7 +2169,8 @@ function openDetalle(codigo) {
     ${t.cliente ? `<div class="result-row"><span class="label">👤 Cliente</span><span class="value gold">${t.cliente}</span></div>` : ''}
     <div class="result-row"><span class="label">Fecha registro</span><span class="value">${t.fecha}</span></div>
     <div class="result-row"><span class="label">Oro pedido</span><span class="value">${fmtNum(t.oro_pedido_g)} g (24k)</span></div>
-    <div class="result-row"><span class="label">Costo total</span><span class="value">${fmtMoney(t.costo_total)}</span></div>
+    <div class="result-row"><span class="label">Costo total del oro</span><span class="value">${fmtMoney(t.costo_total)}</span></div>
+    ${t.costo_vaciado > 0 ? `<div class="result-row"><span class="label">Costo de vaciado</span><span class="value">${fmtMoney(t.costo_vaciado)}</span></div>` : ''}
     <div class="result-row"><span class="label">Costo / g de oro 24k</span><span class="value gold">${fmtMoney(t.costo_g_24k)}</span></div>
     ${sobrante24kIn > 0 ? `<div class="result-row">
       <span class="label">+ Sobrante 24k anterior</span>
@@ -2190,16 +2227,20 @@ function openDetalle(codigo) {
       if (t.completada && t.completacion && imp.costo_por_pieza_buena) {
         const pzVaciado = ['10','14','18'].reduce((s,k) => s + (t.completacion.produccion[k].piezas || 0), 0);
         if (pzVaciado > 0) {
-          const vaciadoPieza  = t.costo_total / pzVaciado;
-          const totalCombinado = imp.costo_por_pieza_buena + vaciadoPieza;
+          const oroPieza      = t.costo_total / pzVaciado;
+          const vaciadoPieza  = (t.costo_vaciado || 0) / pzVaciado;
+          const totalCombinado = imp.costo_por_pieza_buena + oroPieza + vaciadoPieza;
           html += `
             <div style="background:rgba(106,175,130,.08);border:1px solid rgba(106,175,130,.2);border-radius:8px;padding:14px 16px;margin-top:8px">
               <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px">Costo total combinado / pieza buena</div>
-              <div style="display:flex;gap:20px;flex-wrap:wrap">
+              <div style="display:flex;gap:20px;flex-wrap:wrap;align-items:center">
                 <div><div style="font-size:15px;font-weight:700">${fmtMoney(imp.costo_por_pieza_buena)}</div><div style="font-size:10px;color:var(--muted)">Impresión</div></div>
-                <div style="color:var(--muted);font-size:18px;line-height:1.8">+</div>
-                <div><div style="font-size:15px;font-weight:700">${fmtMoney(vaciadoPieza)}</div><div style="font-size:10px;color:var(--muted)">Vaciado (${pzVaciado} pzas)</div></div>
-                <div style="color:var(--muted);font-size:18px;line-height:1.8">=</div>
+                <div style="color:var(--muted);font-size:18px">+</div>
+                <div><div style="font-size:15px;font-weight:700">${fmtMoney(oroPieza)}</div><div style="font-size:10px;color:var(--muted)">Oro (${pzVaciado} pzas)</div></div>
+                ${vaciadoPieza > 0 ? `
+                <div style="color:var(--muted);font-size:18px">+</div>
+                <div><div style="font-size:15px;font-weight:700">${fmtMoney(vaciadoPieza)}</div><div style="font-size:10px;color:var(--muted)">Vaciado</div></div>` : ''}
+                <div style="color:var(--muted);font-size:18px">=</div>
                 <div><div style="font-size:22px;font-weight:700;color:var(--green)">${fmtMoney(totalCombinado)}</div><div style="font-size:10px;color:var(--muted)">Total por pieza</div></div>
               </div>
             </div>`;
@@ -2340,7 +2381,8 @@ function editarTanda(codigo) {
   document.getElementById('edit-error').style.display = 'none';
   toggleEditKilate();
   refreshImpSelect('e-impresion', t.impresion_vinculada || '');
-  document.getElementById('e-cliente').value = t.cliente || '';
+  document.getElementById('e-cliente').value       = t.cliente || '';
+  document.getElementById('e-costo-vaciado').value = t.costo_vaciado || 0;
   document.getElementById('edit-overlay').classList.add('open');
 }
 
@@ -2382,6 +2424,7 @@ async function guardarEdicion() {
   t.kilate_reciclado   = kilate;
   t.impresion_vinculada = impVincEdit || null;
   t.cliente             = document.getElementById('e-cliente')?.value.trim() || null;
+  t.costo_vaciado       = parseFloat(document.getElementById('e-costo-vaciado')?.value) || 0;
 
   const btn = document.querySelector('#edit-overlay .btn-gold');
   btn.textContent = 'Guardando…'; btn.disabled = true;
@@ -2565,79 +2608,111 @@ async function syncActualizar(tanda) {
 }
 
 // ── IMPRESIONES ───────────────────────────────────────────────────────────────
-function calcImpGoldEstimate() {
-  const peso   = parseFloat(document.getElementById('imp-peso-resina')?.value) || 0;
-  const kilate = document.getElementById('imp-kilate-obj')?.value;
-  const mat    = document.getElementById('imp-material')?.value || 'resina';
-  const el     = document.getElementById('imp-gold-estimate');
-  if (!el) return;
-  if (!peso || !kilate) { el.style.display = 'none'; return; }
+// Stub para compatibilidad con código anterior
+function calcImpGoldEstimate() {}
 
-  const { mult, n, isLearned } = getMultInfo(mat, kilate);
-  const estimado  = peso * mult;
-  const defMult   = MULT_DEFAULT[kilate];
-  const diffPct   = ((mult - defMult) / defMult * 100);
-  const diffStr   = isLearned
-    ? `<span style="color:${Math.abs(diffPct)>1?'var(--yellow)':'var(--green)'}">
-        (${diffPct >= 0 ? '+' : ''}${diffPct.toFixed(1)}% vs fórmula base ${defMult}×)
-       </span>`
-    : `<span style="color:var(--muted)">fórmula base — sin datos reales aún</span>`;
-
-  el.style.display = 'block';
-  el.innerHTML = `
-    <div style="background:rgba(196,168,130,.08);border:1px solid rgba(196,168,130,.2);border-radius:8px;padding:14px 16px">
-      <div style="display:flex;justify-content:space-between;align-items:center">
-        <span style="font-size:13px;color:var(--muted)">Oro ${kilate}k estimado necesario</span>
-        <span style="font-size:22px;font-weight:700;color:var(--gold-lt)">${fmtNum(estimado,2)} g</span>
-      </div>
-      <div style="font-size:12px;color:var(--muted);margin-top:8px;line-height:1.7">
-        ${fmtNum(peso,2)} g ${mat} × <strong style="color:var(--text)">${mult}×</strong> = ${fmtNum(estimado,2)} g &nbsp;·&nbsp;
-        ${isLearned
-          ? `✓ <span style="color:var(--green)">Aprendido de ${n} vaciado${n>1?'s':''} real${n>1?'es':''}</span> ${diffStr}`
-          : diffStr
-        }
-      </div>
-    </div>`;
+// Actualiza el estimado de oro para una tarjeta de kilataje individual
+function calcImpKarat(k) {
+  const mat  = document.getElementById('imp-material')?.value || 'resina';
+  const peso = parseFloat(document.getElementById(`imp-${k}k-peso`)?.value) || 0;
+  const el   = document.getElementById(`imp-${k}k-estimate`);
+  if (el) {
+    if (peso > 0) {
+      const { mult, n, isLearned } = getMultInfo(mat, k);
+      const est = +(peso * mult).toFixed(4);
+      const defMult = MULT_DEFAULT[k];
+      const diffPct = ((mult - defMult) / defMult * 100);
+      const badge = isLearned
+        ? `<span style="color:var(--green);font-size:10px"> ✓ ${n} real${n>1?'es':''} (${diffPct>=0?'+':''}${diffPct.toFixed(1)}%)</span>`
+        : `<span style="color:var(--muted);font-size:10px"> base</span>`;
+      el.innerHTML = `<div style="background:rgba(196,168,130,.08);border:1px solid rgba(196,168,130,.15);border-radius:6px;padding:7px 10px;font-size:12px;display:flex;justify-content:space-between;align-items:center">
+        <span style="color:var(--muted)">~Oro ${k}k${badge}</span>
+        <span style="color:var(--gold-lt);font-weight:700">${fmtNum(est,2)} g</span>
+      </div>`;
+    } else {
+      el.innerHTML = '';
+    }
+  }
+  calcImpKaratesAll();
 }
 
-function calcImpPreview() {
-  const total = parseFloat(document.getElementById('imp-total').value) || 0;
-  const costo = parseFloat(document.getElementById('imp-costo').value) || 0;
-  const prev  = document.getElementById('imp-preview');
+// Recalcula totales y previews de costos desde todos los kilatajes
+function calcImpKaratesAll() {
+  const mat   = document.getElementById('imp-material')?.value || 'resina';
+  const costo = parseFloat(document.getElementById('imp-costo')?.value) || 0;
+
+  let total = 0, buenas = 0, rotas = 0, totalEst = 0;
+  let hayBuenas = false, hayRotas = false;
+
+  ['10','14','18'].forEach(k => {
+    const t = parseInt(document.getElementById(`imp-${k}k-total`)?.value)  || 0;
+    const b = document.getElementById(`imp-${k}k-buenas`)?.value;
+    const r = document.getElementById(`imp-${k}k-rotas`)?.value;
+    const p = parseFloat(document.getElementById(`imp-${k}k-peso`)?.value) || 0;
+    total += t;
+    const bv = (b !== '' && b != null && !isNaN(parseInt(b))) ? parseInt(b) : null;
+    const rv = (r !== '' && r != null && !isNaN(parseInt(r))) ? parseInt(r) : null;
+    if (bv !== null) { buenas += bv; hayBuenas = true; }
+    if (rv !== null) { rotas  += rv; hayRotas  = true; }
+    if (p > 0) { const { mult } = getMultInfo(mat, k); totalEst += p * mult; }
+  });
+
+  // Actualizar campos ocultos para compatibilidad
+  const hidTotal  = document.getElementById('imp-total');
+  const hidBuenas = document.getElementById('imp-buenas');
+  const hidRotas  = document.getElementById('imp-rotas');
+  if (hidTotal)  hidTotal.value  = total  || '';
+  if (hidBuenas) hidBuenas.value = hayBuenas ? buenas : '';
+  if (hidRotas)  hidRotas.value  = hayRotas  ? rotas  : '';
+
+  // Totales resumen
+  const totEl = document.getElementById('imp-karat-totales');
+  if (totEl) {
+    if (total > 0) {
+      const pct   = (hayBuenas && total > 0) ? (buenas / total * 100) : null;
+      const color = pct == null ? 'var(--muted)' : pct >= 90 ? 'var(--green)' : pct >= 70 ? 'var(--gold)' : 'var(--red)';
+      totEl.style.display = 'block';
+      totEl.innerHTML = `<div class="calc-preview" style="margin:0">
+        <div class="cp-item"><span class="cp-val">${total}</span><span class="cp-lbl">Total piezas</span></div>
+        ${hayBuenas ? `<div class="cp-item"><span class="cp-val" style="color:var(--green)">${buenas}</span><span class="cp-lbl">Buenas</span></div>` : ''}
+        ${hayRotas  ? `<div class="cp-item"><span class="cp-val" style="color:var(--red)">${rotas}</span><span class="cp-lbl">Rotas</span></div>` : ''}
+        ${pct != null ? `<div class="cp-item"><span class="cp-val" style="color:${color}">${pct.toFixed(1)}%</span><span class="cp-lbl">Tasa éxito</span></div>` : ''}
+        ${totalEst > 0 ? `<div class="cp-item"><span class="cp-val" style="color:var(--gold-lt)">${fmtNum(totalEst,2)} g</span><span class="cp-lbl">Oro estimado</span></div>` : ''}
+      </div>`;
+    } else {
+      totEl.style.display = 'none';
+    }
+  }
+
+  // Preview de costos
+  const prev     = document.getElementById('imp-preview');
+  const prevCpp  = document.getElementById('prev-cpp');
+  const prevCppR = document.getElementById('prev-cpp-real');
+  const prevExit = document.getElementById('prev-exito');
+  const prevBar  = document.getElementById('prev-bar');
+  const prevPerd = document.getElementById('prev-perdida');
+
   if (total > 0 && costo > 0) {
-    document.getElementById('prev-cpp').textContent = fmtMoney(costo / total);
-    prev.style.display = 'flex';
-  } else {
+    if (prevCpp) prevCpp.textContent = fmtMoney(costo / total);
+    if (prev)    prev.style.display  = 'flex';
+    if (hayBuenas && buenas > 0) {
+      const pct   = buenas / total * 100;
+      const cppR  = costo / buenas;
+      const perd  = hayRotas ? (rotas / total) * costo : 0;
+      const color = pct >= 90 ? 'var(--green)' : pct >= 70 ? 'var(--gold)' : 'var(--red)';
+      if (prevCppR) prevCppR.textContent = fmtMoney(cppR);
+      if (prevExit) { prevExit.textContent = pct.toFixed(1) + '%'; prevExit.style.color = color; }
+      if (prevBar)  { prevBar.style.width = pct + '%'; prevBar.style.background = color; }
+      if (prevPerd) prevPerd.textContent = fmtMoney(perd);
+    }
+  } else if (prev) {
     prev.style.display = 'none';
   }
-  calcImpResultado();
 }
 
-function calcImpResultado() {
-  const total  = parseFloat(document.getElementById('imp-total').value) || 0;
-  const costo  = parseFloat(document.getElementById('imp-costo').value) || 0;
-  const buenas = parseFloat(document.getElementById('imp-buenas').value);
-  const rotas  = parseFloat(document.getElementById('imp-rotas').value);
-  const prev   = document.getElementById('imp-resultado-preview');
-
-  if (!isNaN(buenas) && !isNaN(rotas) && total > 0 && costo > 0) {
-    const pct     = total > 0 ? (buenas / total) * 100 : 0;
-    const cppReal = buenas > 0 ? costo / buenas : 0;
-    const perdida = rotas > 0 && total > 0 ? (rotas / total) * costo : 0;
-    const color   = pct >= 90 ? 'var(--green)' : pct >= 70 ? 'var(--gold)' : 'var(--red)';
-
-    document.getElementById('prev-exito').textContent  = pct.toFixed(1) + '%';
-    document.getElementById('prev-exito').style.color  = color;
-    document.getElementById('prev-bar').style.width    = pct + '%';
-    document.getElementById('prev-bar').style.background = color;
-    document.getElementById('prev-cpp-real').textContent = buenas > 0 ? fmtMoney(cppReal) : '—';
-    document.getElementById('prev-perdida').textContent  = perdida > 0 ? fmtMoney(perdida) : '$0.00';
-    prev.style.display = 'flex';
-  } else {
-    prev.style.display = 'none';
-  }
-  calcImpTandaPreview();
-}
+// Stubs de compatibilidad
+function calcImpPreview()   { calcImpKaratesAll(); }
+function calcImpResultado() { calcImpKaratesAll(); }
 
 function guardarImpresion() {
   const errEl  = document.getElementById('imp-error');
@@ -2645,53 +2720,78 @@ function guardarImpresion() {
 
   const fecha    = document.getElementById('imp-fecha').value;
   const nombre   = document.getElementById('imp-nombre').value.trim();
-  const total    = parseInt(document.getElementById('imp-total').value);
   const costo    = parseFloat(document.getElementById('imp-costo').value);
-  const buenas   = parseInt(document.getElementById('imp-buenas').value);
-  const rotas    = parseInt(document.getElementById('imp-rotas').value);
   const material = document.getElementById('imp-material')?.value || 'resina';
   const notas    = document.getElementById('imp-notas')?.value.trim() || '';
 
   if (!fecha)               { errEl.textContent = 'Agrega la fecha.'; errEl.style.display='block'; return; }
   if (!nombre)              { errEl.textContent = 'Agrega un nombre o descripción.'; errEl.style.display='block'; return; }
-  if (!total || total < 1)  { errEl.textContent = 'Ingresa el total de piezas impresas.'; errEl.style.display='block'; return; }
   if (!costo || costo <= 0) { errEl.textContent = 'Ingresa el costo total.'; errEl.style.display='block'; return; }
 
-  const buen = isNaN(buenas) ? null : buenas;
-  const rot  = isNaN(rotas)  ? null : rotas;
+  // Leer datos por kilataje
+  const kilates = {};
+  let totalPiezas = 0, totalBuenas = 0, totalRotas = 0;
+  let hayBuenas = false, hayRotas = false;
+  let validationError = null;
 
-  if (buen !== null && rot !== null && (buen + rot) > total) {
-    errEl.textContent = 'La suma de buenas + rotas no puede superar el total de piezas.';
-    errEl.style.display = 'block'; return;
-  }
+  ['10','14','18'].forEach(k => {
+    if (validationError) return;
+    const t = parseInt(document.getElementById(`imp-${k}k-total`)?.value)  || 0;
+    const b = document.getElementById(`imp-${k}k-buenas`)?.value;
+    const r = document.getElementById(`imp-${k}k-rotas`)?.value;
+    const p = parseFloat(document.getElementById(`imp-${k}k-peso`)?.value) || 0;
+
+    if (t > 0 || p > 0) {
+      const bv = (b !== '' && b != null && !isNaN(parseInt(b))) ? parseInt(b) : null;
+      const rv = (r !== '' && r != null && !isNaN(parseInt(r))) ? parseInt(r) : null;
+      if (bv !== null && rv !== null && (bv + rv) > t) {
+        validationError = `En ${k}k: la suma de buenas + rotas supera el total (${t}).`;
+        return;
+      }
+      const { mult } = getMultInfo(material, k);
+      kilates[k] = {
+        total:         t,
+        buenas:        bv,
+        rotas:         rv,
+        peso_resina_g: p || null,
+        estimado_g:    p > 0 ? +(p * mult).toFixed(4) : null,
+      };
+      totalPiezas += t;
+      if (bv !== null) { hayBuenas = true; totalBuenas += bv; }
+      if (rv !== null) { hayRotas  = true; totalRotas  += rv; }
+    }
+  });
+
+  if (validationError)    { errEl.textContent = validationError; errEl.style.display='block'; return; }
+  if (totalPiezas === 0)  { errEl.textContent = 'Ingresa al menos un kilataje con piezas impresas.'; errEl.style.display='block'; return; }
 
   const d = getData();
-
-  // Generar código secuencial
   d.ultimo_imp = (d.ultimo_imp || 0) + 1;
   const codigo = 'IMP-' + String(d.ultimo_imp).padStart(4, '0');
 
-  const cpp_buena = buen > 0 ? costo / buen : null;
+  // Kilate primario: el que tenga más piezas (para compatibilidad)
+  const kilateObj = Object.entries(kilates).reduce(
+    (best, [k, kd]) => (!best || kd.total > (kilates[best]?.total || 0)) ? k : best, null);
 
-  const pesoResina   = parseFloat(document.getElementById('imp-peso-resina')?.value) || 0;
-  const kilateObj    = document.getElementById('imp-kilate-obj')?.value || null;
-  const { mult: multUsado } = kilateObj ? getMultInfo(material, kilateObj) : { mult: null };
-  const estimadoG    = (pesoResina > 0 && kilateObj) ? +(pesoResina * multUsado).toFixed(4) : null;
+  const buen = hayBuenas ? totalBuenas : null;
+  const rot  = hayRotas  ? totalRotas  : null;
+  const cpp_buena = buen > 0 ? costo / buen : null;
 
   const imp = {
     id:                    'IMP-' + fecha.replace(/-/g,'') + '-' + Date.now(),
     codigo,
     fecha, nombre, material,
-    peso_resina_g:         pesoResina || null,
-    kilate_objetivo:       kilateObj,
-    estimado_g:            estimadoG,
-    total_piezas:          total,
+    kilates,                                          // nueva estructura por kilataje
+    kilate_objetivo:       kilateObj,                 // compat
+    peso_resina_g:         kilates[kilateObj]?.peso_resina_g || null,
+    estimado_g:            kilates[kilateObj]?.estimado_g    || null,
+    total_piezas:          totalPiezas,
     costo_total:           costo,
-    costo_por_pieza:       +(costo / total).toFixed(4),
+    costo_por_pieza:       +(costo / totalPiezas).toFixed(4),
     buenas:                buen,
     rotas:                 rot,
     costo_por_pieza_buena: cpp_buena !== null ? +cpp_buena.toFixed(4) : null,
-    tasa_exito:            buen !== null ? +(buen / total).toFixed(4) : null,
+    tasa_exito:            buen !== null ? +(buen / totalPiezas).toFixed(4) : null,
     notas,
   };
 
@@ -2705,20 +2805,26 @@ function guardarImpresion() {
 }
 
 function limpiarImpresion() {
-  ['imp-fecha','imp-nombre','imp-total','imp-costo','imp-buenas','imp-rotas','imp-notas']
+  ['imp-fecha','imp-nombre','imp-costo','imp-notas']
     .forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
   const matEl = document.getElementById('imp-material');
   if (matEl) matEl.value = 'resina';
   document.getElementById('imp-fecha').value = today();
+
+  // Limpiar campos por kilataje
+  ['10','14','18'].forEach(k => {
+    ['total','buenas','rotas','peso'].forEach(f => {
+      const el = document.getElementById(`imp-${k}k-${f}`);
+      if (el) el.value = '';
+    });
+    const est = document.getElementById(`imp-${k}k-estimate`);
+    if (est) est.innerHTML = '';
+  });
+
+  const totEl = document.getElementById('imp-karat-totales');
+  if (totEl) totEl.style.display = 'none';
   document.getElementById('imp-preview').style.display = 'none';
-  document.getElementById('imp-resultado-preview').style.display = 'none';
-  document.getElementById('imp-error').style.display = 'none';
-  const pesoEl   = document.getElementById('imp-peso-resina');
-  const kilateEl = document.getElementById('imp-kilate-obj');
-  const estEl    = document.getElementById('imp-gold-estimate');
-  if (pesoEl)   pesoEl.value = '';
-  if (kilateEl) kilateEl.value = '';
-  if (estEl)    estEl.style.display = 'none';
+  document.getElementById('imp-error').style.display   = 'none';
   updateImpCodigoPreview();
 }
 
@@ -2747,7 +2853,7 @@ function renderImpresiones() {
     if (!lt || !lt.completada || !lt.completacion || !imp.costo_por_pieza_buena) return null;
     const pz = ['10','14','18'].reduce((s,k) => s + (lt.completacion.produccion[k].piezas || 0), 0);
     if (!pz) return null;
-    return imp.costo_por_pieza_buena + lt.costo_total / pz;
+    return imp.costo_por_pieza_buena + (lt.costo_total + (lt.costo_vaciado || 0)) / pz;
   }
 
   // Stats
@@ -2814,9 +2920,11 @@ function renderImpresiones() {
           ${lt ? `<span class="imp-tanda-badge">🔗 ${lt.codigo}</span>` : ''}
         </div>
         <span class="imp-sub">${imp.fecha}${matLabel ? ' · ' + matLabel : ''} · ${imp.total_piezas} piezas · ${fmtMoney(imp.costo_total)}</span>
-        ${imp.buenas != null
-          ? `<span class="imp-sub">✅ ${imp.buenas} buenas · ❌ ${imp.rotas ?? 0} rotas</span>`
-          : '<span class="imp-sub" style="color:var(--muted);font-style:italic">Resultado pendiente</span>'}
+        ${imp.kilates
+          ? `<span class="imp-sub">${Object.entries(imp.kilates).filter(([k,kd])=>kd.total>0).map(([k,kd])=>`${k}k: ${kd.total} pzs${kd.buenas!=null?' (✅'+kd.buenas+')':''}`).join(' · ')}</span>`
+          : (imp.buenas != null
+            ? `<span class="imp-sub">✅ ${imp.buenas} buenas · ❌ ${imp.rotas ?? 0} rotas</span>`
+            : '<span class="imp-sub" style="color:var(--muted);font-style:italic">Resultado pendiente</span>')}
         ${imp.notas ? `<span class="imp-sub" style="color:var(--muted);font-style:italic">${imp.notas}</span>` : ''}
       </div>
       <div class="imp-right">
