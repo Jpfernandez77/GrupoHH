@@ -608,7 +608,7 @@
                 <input type="number" id="c-10k-malas" placeholder="0" min="0" step="1" value="0" onchange="calcularPreview()"
                   /></div>
               <div class="field mt-16"><label>Peso total (g)</label>
-                <input type="number" id="c-10k-peso" placeholder="0.00" min="0" step="0.01" value="0" onchange="calcularPreview()" /></div>
+                <input type="text" inputmode="decimal" id="c-10k-peso" placeholder="0.00" value="0" onchange="calcularPreview()" onblur="evalGramInput(this)" /></div>
             </div>
             <div class="karat-card">
               <h4>🔶 Oro 14k</h4>
@@ -618,7 +618,7 @@
                 <input type="number" id="c-14k-malas" placeholder="0" min="0" step="1" value="0" onchange="calcularPreview()"
                   /></div>
               <div class="field mt-16"><label>Peso total (g)</label>
-                <input type="number" id="c-14k-peso" placeholder="0.00" min="0" step="0.01" value="0" onchange="calcularPreview()" /></div>
+                <input type="text" inputmode="decimal" id="c-14k-peso" placeholder="0.00" value="0" onchange="calcularPreview()" onblur="evalGramInput(this)" /></div>
             </div>
             <div class="karat-card">
               <h4>🟡 Oro 18k</h4>
@@ -628,7 +628,7 @@
                 <input type="number" id="c-18k-malas" placeholder="0" min="0" step="1" value="0" onchange="calcularPreview()"
                   /></div>
               <div class="field mt-16"><label>Peso total (g)</label>
-                <input type="number" id="c-18k-peso" placeholder="0.00" min="0" step="0.01" value="0" onchange="calcularPreview()" /></div>
+                <input type="text" inputmode="decimal" id="c-18k-peso" placeholder="0.00" value="0" onchange="calcularPreview()" onblur="evalGramInput(this)" /></div>
             </div>
           </div>
         </div>
@@ -638,22 +638,22 @@
           <div class="grid-2">
             <div class="field">
               <label>Sobrante 24k <span style="color:var(--muted);font-weight:400">(gramos físicos sin usar)</span></label>
-              <input type="number" id="c-sobro-real" placeholder="0.0000" min="0" step="0.0001" value="0" onchange="calcularPreview()" />
+              <input type="text" inputmode="decimal" id="c-sobro-real" placeholder="0.0000" value="0" onchange="calcularPreview()" onblur="evalGramInput(this)" />
             </div>
             <div class="field">
               <label>Soportes por kilataje <span style="color:var(--muted);font-weight:400">(bebederos + árbol)</span></label>
               <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:4px">
                 <div>
                   <div style="font-size:11px;color:var(--muted);margin-bottom:4px">10k (g)</div>
-                  <input type="number" id="c-sop-10" placeholder="0" min="0" step="0.0001" value="0" onchange="calcularPreview()" />
+                  <input type="text" inputmode="decimal" id="c-sop-10" placeholder="0" value="0" onchange="calcularPreview()" onblur="evalGramInput(this)" />
                 </div>
                 <div>
                   <div style="font-size:11px;color:var(--muted);margin-bottom:4px">14k (g)</div>
-                  <input type="number" id="c-sop-14" placeholder="0" min="0" step="0.0001" value="0" onchange="calcularPreview()" />
+                  <input type="text" inputmode="decimal" id="c-sop-14" placeholder="0" value="0" onchange="calcularPreview()" onblur="evalGramInput(this)" />
                 </div>
                 <div>
                   <div style="font-size:11px;color:var(--muted);margin-bottom:4px">18k (g)</div>
-                  <input type="number" id="c-sop-18" placeholder="0" min="0" step="0.0001" value="0" onchange="calcularPreview()" />
+                  <input type="text" inputmode="decimal" id="c-sop-18" placeholder="0" value="0" onchange="calcularPreview()" onblur="evalGramInput(this)" />
                 </div>
               </div>
             </div>
@@ -724,7 +724,7 @@
             <div class="field mt-16"><label>❌ Piezas rotas</label>
               <input type="number" id="imp-10k-rotas" placeholder="0" min="0" step="1" oninput="calcImpKarat('10')" /></div>
             <div class="field mt-16"><label>Peso modelo (g)</label>
-              <input type="number" id="imp-10k-peso" placeholder="0.00" min="0" step="0.01" oninput="calcImpKarat('10')" /></div>
+              <input type="text" inputmode="decimal" id="imp-10k-peso" placeholder="0.00" oninput="calcImpKarat('10')" onblur="evalGramInput(this)" /></div>
             <div id="imp-10k-estimate" style="margin-top:8px"></div>
           </div>
           <div class="karat-card">
@@ -736,7 +736,7 @@
             <div class="field mt-16"><label>❌ Piezas rotas</label>
               <input type="number" id="imp-14k-rotas" placeholder="0" min="0" step="1" oninput="calcImpKarat('14')" /></div>
             <div class="field mt-16"><label>Peso modelo (g)</label>
-              <input type="number" id="imp-14k-peso" placeholder="0.00" min="0" step="0.01" oninput="calcImpKarat('14')" /></div>
+              <input type="text" inputmode="decimal" id="imp-14k-peso" placeholder="0.00" oninput="calcImpKarat('14')" onblur="evalGramInput(this)" /></div>
             <div id="imp-14k-estimate" style="margin-top:8px"></div>
           </div>
           <div class="karat-card">
@@ -748,7 +748,7 @@
             <div class="field mt-16"><label>❌ Piezas rotas</label>
               <input type="number" id="imp-18k-rotas" placeholder="0" min="0" step="1" oninput="calcImpKarat('18')" /></div>
             <div class="field mt-16"><label>Peso modelo (g)</label>
-              <input type="number" id="imp-18k-peso" placeholder="0.00" min="0" step="0.01" oninput="calcImpKarat('18')" /></div>
+              <input type="text" inputmode="decimal" id="imp-18k-peso" placeholder="0.00" oninput="calcImpKarat('18')" onblur="evalGramInput(this)" /></div>
             <div id="imp-18k-estimate" style="margin-top:8px"></div>
           </div>
         </div>
@@ -1215,6 +1215,24 @@ function genCodigo(data, fecha) {
 function fmtNum(n, dec=2)  { return Number(n).toFixed(dec); }
 function fmtMoney(n)       { return '$' + Number(n).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g,','); }
 function today()           { return new Date().toISOString().slice(0,10); }
+
+// Evalúa expresiones matemáticas en campos de gramaje (ej: "2.28+1" → "3.28")
+function evalGramInput(el) {
+  const raw = (el.value || '').trim();
+  if (!raw || !raw.match(/[+\-*/]/)) return;
+  // Solo permite dígitos, decimales y operadores seguros
+  const safe = raw.replace(/[^0-9.+\-*/()]/g, '');
+  if (!safe) return;
+  try {
+    // eslint-disable-next-line no-new-func
+    const val = Function('"use strict";return(' + safe + ')')();
+    if (isFinite(val) && !isNaN(val) && val >= 0) {
+      el.value = +val.toFixed(4);
+      el.dispatchEvent(new Event('input',  { bubbles: true }));
+      el.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+  } catch {}
+}
 function toast(msg, color='var(--green)') {
   const el = document.getElementById('toast');
   el.textContent = msg;
@@ -1825,14 +1843,21 @@ async function registrarTanda() {
   const kilateRecic = parseFloat(kilateRaw) || 0;
 
   if (!fecha) { mostrarErrorForm('Selecciona una fecha.'); return; }
-  if (!pedidoRaw || isNaN(pedido) || pedido <= 0) {
+  if (pedidoRaw && (isNaN(pedido) || pedido < 0)) {
     document.getElementById('n-pedido').style.borderColor = 'var(--red)';
-    mostrarErrorForm('Ingresa los gramos de oro pedido (debe ser mayor a 0).');
+    mostrarErrorForm('Los gramos de oro no pueden ser negativos.');
     return;
   }
-  if (!costoRaw || isNaN(costo) || costo <= 0) {
+  if (costoRaw && (isNaN(costo) || costo < 0)) {
     document.getElementById('n-costo').style.borderColor = 'var(--red)';
-    mostrarErrorForm('Ingresa el costo total del oro (debe ser mayor a 0).');
+    mostrarErrorForm('El costo no puede ser negativo.');
+    return;
+  }
+  // Requiere al menos algún aporte de oro
+  const sobrante24kCheck = parseFloat(document.getElementById('n-sobrante-anterior')?.value) || 0;
+  const totalEntradaCheck = (pedido || 0) + sobrante24kCheck + (recic * ((kilateRecic || 0) / 24));
+  if (totalEntradaCheck <= 0) {
+    mostrarErrorForm('La tanda necesita al menos algún aporte de oro (comprado, reciclado o sobrante).');
     return;
   }
   if (recic > 0 && (!kilateRaw || isNaN(kilateRecic) || kilateRecic <= 0)) {
@@ -1860,7 +1885,7 @@ async function registrarTanda() {
       costo_total:          costo,
       costo_vaciado:        costoVaciado,
       oro_fino_comprado_g:  +pedido.toFixed(4),
-      costo_g_24k:          +(costo / pedido).toFixed(4),
+      costo_g_24k:          pedido > 0 ? +(costo / pedido).toFixed(4) : 0,
       sobrante_anterior_g:  sobrante24k,
       origen_reciclado:     origenSobrant || null,
       oro_reciclado_g:      recic,
