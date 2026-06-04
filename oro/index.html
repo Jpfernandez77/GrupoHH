@@ -510,7 +510,7 @@
         <div class="grid-2">
           <div class="field">
             <label>Gramos pedidos</label>
-            <input type="number" id="n-pedido" placeholder="0.00" min="0" step="0.01" />
+            <input type="text" inputmode="decimal" id="n-pedido" placeholder="0.00" oninput="actualizarPreviewNueva()" onblur="evalGramInput(this)" />
           </div>
           <div class="field">
             <label>Kilataje</label>
@@ -520,11 +520,11 @@
           </div>
           <div class="field" style="grid-column:1/-1">
             <label>Costo total del oro ($)</label>
-            <input type="number" id="n-costo" placeholder="0.00" min="0" step="0.01" style="max-width:260px" />
+            <input type="text" inputmode="decimal" id="n-costo" placeholder="0.00" style="max-width:260px" oninput="actualizarPreviewNueva()" onblur="evalGramInput(this)" />
           </div>
           <div class="field" style="grid-column:1/-1">
             <label>Costo de vaciado ($) <span style="color:var(--muted);font-weight:400">(opcional — servicio de fundición)</span></label>
-            <input type="number" id="n-costo-vaciado" placeholder="0.00" min="0" step="0.01" style="max-width:260px" />
+            <input type="text" inputmode="decimal" id="n-costo-vaciado" placeholder="0.00" style="max-width:260px" onblur="evalGramInput(this)" />
           </div>
         </div>
       </div>
@@ -543,8 +543,8 @@
         </div>
         <div class="field">
           <label>Gramos de sobrante 24k</label>
-          <input type="number" id="n-sobrante-anterior" placeholder="0.00" min="0" step="0.0001" value="0"
-            oninput="actualizarPreviewNueva()" style="max-width:200px" />
+          <input type="text" inputmode="decimal" id="n-sobrante-anterior" placeholder="0.00" value="0"
+            oninput="actualizarPreviewNueva()" style="max-width:200px" onblur="evalGramInput(this)" />
         </div>
 
         <hr style="border:none;border-top:1px solid var(--border);margin:20px 0">
@@ -557,7 +557,7 @@
         <div class="grid-2">
           <div class="field">
             <label>Gramos reciclados (0 si no hay)</label>
-            <input type="number" id="n-reciclado" placeholder="0.00" min="0" step="0.01" value="0" oninput="toggleKilateRecic()" />
+            <input type="text" inputmode="decimal" id="n-reciclado" placeholder="0.00" value="0" oninput="toggleKilateRecic()" onblur="evalGramInput(this)" />
           </div>
           <div class="field" id="n-kilate-recic-field">
             <label>Kilataje del oro reciclado</label>
@@ -761,7 +761,7 @@
         <div class="grid-2">
           <div class="field">
             <label>Costo total de impresión ($)</label>
-            <input type="number" id="imp-costo" placeholder="0.00" min="0" step="0.01" oninput="calcImpKaratesAll()" />
+            <input type="text" inputmode="decimal" id="imp-costo" placeholder="0.00" oninput="calcImpKaratesAll()" onblur="evalGramInput(this)" />
           </div>
         </div>
         <!-- Preview costos -->
@@ -835,8 +835,8 @@
                 style="padding:2px 10px;font-size:11px;font-weight:600"
                 onclick="usarPrecioUltimaTanda()">↑ Última tanda</button>
             </label>
-            <input type="number" id="calc-precio" placeholder="0.00" min="0" step="0.01"
-              oninput="calcularMaterial()" />
+            <input type="text" inputmode="decimal" id="calc-precio" placeholder="0.00"
+              oninput="calcularMaterial()" onblur="evalGramInput(this)" />
           </div>
         </div>
       </div>
@@ -848,8 +848,8 @@
           <h4 style="font-size:15px;margin-bottom:16px">🔸 Oro 10k</h4>
           <div class="field">
             <label>Peso de resina / cera (g)</label>
-            <input type="number" id="calc-10-resina" placeholder="0.00" min="0" step="0.01"
-              oninput="calcularMaterial()" />
+            <input type="text" inputmode="decimal" id="calc-10-resina" placeholder="0.00"
+              oninput="calcularMaterial()" onblur="evalGramInput(this)" />
           </div>
           <div class="field mt-16">
             <label>Número de piezas</label>
@@ -863,8 +863,8 @@
           <h4 style="font-size:15px;margin-bottom:16px">🔶 Oro 14k</h4>
           <div class="field">
             <label>Peso de resina / cera (g)</label>
-            <input type="number" id="calc-14-resina" placeholder="0.00" min="0" step="0.01"
-              oninput="calcularMaterial()" />
+            <input type="text" inputmode="decimal" id="calc-14-resina" placeholder="0.00"
+              oninput="calcularMaterial()" onblur="evalGramInput(this)" />
           </div>
           <div class="field mt-16">
             <label>Número de piezas</label>
@@ -878,8 +878,8 @@
           <h4 style="font-size:15px;margin-bottom:16px">🟡 Oro 18k</h4>
           <div class="field">
             <label>Peso de resina / cera (g)</label>
-            <input type="number" id="calc-18-resina" placeholder="0.00" min="0" step="0.01"
-              oninput="calcularMaterial()" />
+            <input type="text" inputmode="decimal" id="calc-18-resina" placeholder="0.00"
+              oninput="calcularMaterial()" onblur="evalGramInput(this)" />
           </div>
           <div class="field mt-16">
             <label>Número de piezas</label>
@@ -923,19 +923,19 @@
       <div class="grid-2">
         <div class="field">
           <label>Gramos pedidos (24k)</label>
-          <input type="number" id="e-pedido" min="0" step="0.01" />
+          <input type="text" inputmode="decimal" id="e-pedido" onblur="evalGramInput(this)" />
         </div>
         <div class="field">
           <label>Costo total del oro ($)</label>
-          <input type="number" id="e-costo" min="0" step="0.01" />
+          <input type="text" inputmode="decimal" id="e-costo" onblur="evalGramInput(this)" />
         </div>
         <div class="field">
           <label>Costo de vaciado ($) <span style="color:var(--muted);font-weight:400">(opcional)</span></label>
-          <input type="number" id="e-costo-vaciado" min="0" step="0.01" placeholder="0.00" />
+          <input type="text" inputmode="decimal" id="e-costo-vaciado" placeholder="0.00" onblur="evalGramInput(this)" />
         </div>
         <div class="field">
           <label>Gramos reciclados</label>
-          <input type="number" id="e-reciclado" min="0" step="0.01" value="0" oninput="toggleEditKilate()" />
+          <input type="text" inputmode="decimal" id="e-reciclado" value="0" oninput="toggleEditKilate()" onblur="evalGramInput(this)" />
         </div>
         <div class="field" id="e-kilate-field" style="display:none">
           <label>Kilataje del reciclado</label>
