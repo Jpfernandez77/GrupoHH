@@ -492,6 +492,10 @@
           </div>
         </div>
         <div class="field" style="margin-top:14px">
+          <label>👤 Cliente <span style="color:var(--muted);font-weight:400">(opcional)</span></label>
+          <input type="text" id="n-cliente" placeholder="Nombre del cliente o proyecto…" />
+        </div>
+        <div class="field" style="margin-top:14px">
           <label>🖨 Impresión vinculada <span style="color:var(--muted);font-weight:400">(opcional — ¿de qué impresión vienen los modelos?)</span></label>
           <select id="n-impresion">
             <option value="">— Sin vincular —</option>
@@ -873,6 +877,10 @@
           <label>Código (no editable)</label>
           <input type="text" id="e-codigo" readonly />
         </div>
+      </div>
+      <div class="field" style="margin-top:14px">
+        <label>👤 Cliente <span style="color:var(--muted);font-weight:400">(opcional)</span></label>
+        <input type="text" id="e-cliente" placeholder="Nombre del cliente o proyecto…" />
       </div>
       <hr class="sep">
       <div class="grid-2">
@@ -1592,7 +1600,7 @@ function tandaItemHtml(t) {
     <div id="item-${cid}">
       <div class="tanda-item">
         <div class="meta" onclick="openDetalle('${t.codigo}')" style="flex:1;cursor:pointer;min-width:0">
-          <span class="code">${t.codigo}</span>
+          <span class="code">${t.codigo}${t.cliente ? `  <span style="font-size:12px;font-weight:500;color:var(--gold-dk)">· ${t.cliente}</span>` : ''}</span>
           <span class="sub">${t.fecha} &nbsp;·&nbsp; 24k comprado${reciclInfo}</span>
         </div>
         <div class="right">
@@ -1734,6 +1742,7 @@ async function registrarTanda() {
     const impVinc       = document.getElementById('n-impresion')?.value || null;
     const origenSobrant = document.getElementById('n-origen-reciclado')?.value || null;
     const sobrante24k   = parseFloat(document.getElementById('n-sobrante-anterior')?.value) || 0;
+    const cliente       = document.getElementById('n-cliente')?.value.trim() || null;
     const tanda = {
       codigo:               `ORO_${String(d.tandas.length + 1).padStart(8,'0')}`,
       fecha,
@@ -1750,6 +1759,7 @@ async function registrarTanda() {
       completada:           false,
       completacion:         null,
       impresion_vinculada:  impVinc || null,
+      cliente:              cliente,
     };
     d.tandas.push(tanda);
     await syncGuardar(tanda);
@@ -1781,6 +1791,8 @@ function limpiarNueva() {
   if (origenEl) origenEl.value = '';
   const sobrEl = document.getElementById('n-sobrante-anterior');
   if (sobrEl) sobrEl.value = '0';
+  const clienteEl = document.getElementById('n-cliente');
+  if (clienteEl) clienteEl.value = '';
 }
 
 // ── COMPLETAR TANDA ───────────────────────────────────────────────────────────
@@ -2013,6 +2025,7 @@ function openDetalle(codigo) {
 
   let html = `
     <h3>Información General</h3>
+    ${t.cliente ? `<div class="result-row"><span class="label">👤 Cliente</span><span class="value gold">${t.cliente}</span></div>` : ''}
     <div class="result-row"><span class="label">Fecha registro</span><span class="value">${t.fecha}</span></div>
     <div class="result-row"><span class="label">Oro pedido</span><span class="value">${fmtNum(t.oro_pedido_g)} g (24k)</span></div>
     <div class="result-row"><span class="label">Costo total</span><span class="value">${fmtMoney(t.costo_total)}</span></div>
@@ -2222,6 +2235,7 @@ function editarTanda(codigo) {
   document.getElementById('edit-error').style.display = 'none';
   toggleEditKilate();
   refreshImpSelect('e-impresion', t.impresion_vinculada || '');
+  document.getElementById('e-cliente').value = t.cliente || '';
   document.getElementById('edit-overlay').classList.add('open');
 }
 
@@ -2262,6 +2276,7 @@ async function guardarEdicion() {
   t.oro_reciclado_g    = recic;
   t.kilate_reciclado   = kilate;
   t.impresion_vinculada = impVincEdit || null;
+  t.cliente             = document.getElementById('e-cliente')?.value.trim() || null;
 
   const btn = document.querySelector('#edit-overlay .btn-gold');
   btn.textContent = 'Guardando…'; btn.disabled = true;
