@@ -1663,33 +1663,63 @@ function toggleKilateRecic() {
 }
 
 function actualizarPreviewNueva() {
-  const pedido       = parseFloat(document.getElementById('n-pedido').value)           || 0;
-  const costo        = parseFloat(document.getElementById('n-costo').value)            || 0;
-  const sobrante24k  = parseFloat(document.getElementById('n-sobrante-anterior').value) || 0;
-  const recic        = parseFloat(document.getElementById('n-reciclado').value)        || 0;
-  const kilateRecic  = parseFloat(document.getElementById('n-kilate-recic').value)     || 0;
-  const box          = document.getElementById('nueva-preview');
+  const pedido      = parseFloat(document.getElementById('n-pedido').value)            || 0;
+  const costo       = parseFloat(document.getElementById('n-costo').value)             || 0;
+  const sobrante24k = parseFloat(document.getElementById('n-sobrante-anterior').value) || 0;
+  const recic       = parseFloat(document.getElementById('n-reciclado').value)         || 0;
+  const kilateRecic = parseFloat(document.getElementById('n-kilate-recic').value)      || 0;
+  const box         = document.getElementById('nueva-preview');
 
-  if (!pedido || !costo) { box.style.display = 'none'; return; }
+  const hayAlgo = pedido > 0 || sobrante24k > 0 || recic > 0;
+  if (!hayAlgo) { box.style.display = 'none'; return; }
 
-  const cg24k     = costo / pedido;
-  const finoRecic = recic * (kilateRecic / 24);
-  const totalFino = pedido + sobrante24k + finoRecic;
+  const finoComprado = pedido;
+  const finoSobrante = sobrante24k;
+  const finoRecic    = (recic > 0 && kilateRecic > 0) ? recic * (kilateRecic / 24) : 0;
+  const totalFino    = finoComprado + finoSobrante + finoRecic;
+  const cg24k        = (costo > 0 && pedido > 0) ? costo / pedido : 0;
 
-  const sobrante24kRow = sobrante24k > 0
-    ? `<div class="result-row"><span class="label">+ Sobrante 24k de tanda anterior</span><span class="value">${fmtNum(sobrante24k)} g</span></div>`
-    : '';
-  const reciclRow = recic > 0 && kilateRecic > 0
-    ? `<div class="result-row"><span class="label">+ Oro reciclado (${kilateRecic}k) → 24k equiv.</span><span class="value">${fmtNum(finoRecic)} g</span></div>`
-    : '';
+  // Barra de composición
+  const pctComprado  = totalFino > 0 ? (finoComprado / totalFino * 100) : 0;
+  const pctSobrante  = totalFino > 0 ? (finoSobrante / totalFino * 100) : 0;
+  const pctRecic     = totalFino > 0 ? (finoRecic    / totalFino * 100) : 0;
+
+  const barRecic = finoRecic > 0 ? `<div style="height:100%;width:${pctRecic.toFixed(1)}%;background:var(--blue);border-radius:0 4px 4px 0"></div>` : '';
+  const barSob   = finoSobrante > 0 ? `<div style="height:100%;width:${pctSobrante.toFixed(1)}%;background:var(--teal)"></div>` : '';
+
+  const filas = [
+    pedido > 0      ? `<div class="result-row">
+      <span class="label">🟡 Oro 24k comprado</span>
+      <span class="value">${fmtNum(pedido,4)} g <span style="color:var(--muted);font-size:12px">→ ${fmtNum(finoComprado,4)} g fino</span></span>
+    </div>` : '',
+    sobrante24k > 0 ? `<div class="result-row">
+      <span class="label">♻️ Sobrante 24k reutilizado</span>
+      <span class="value">${fmtNum(sobrante24k,4)} g <span style="color:var(--muted);font-size:12px">→ ${fmtNum(finoSobrante,4)} g fino</span></span>
+    </div>` : '',
+    recic > 0 && kilateRecic > 0 ? `<div class="result-row">
+      <span class="label">🔄 Reciclado ${kilateRecic}k</span>
+      <span class="value">${fmtNum(recic,4)} g <span style="color:var(--muted);font-size:12px">→ ${fmtNum(finoRecic,4)} g fino</span></span>
+    </div>` : '',
+    recic > 0 && !kilateRecic ? `<div class="result-row">
+      <span class="label" style="color:var(--muted)">🔄 Reciclado (falta kilataje)</span>
+      <span class="value" style="color:var(--muted)">${fmtNum(recic,4)} g</span>
+    </div>` : '',
+  ].filter(Boolean).join('');
 
   box.style.display = 'block';
   box.innerHTML = `
-    <h3>Vista Previa</h3>
-    <div class="result-row"><span class="label">Costo por gramo de oro 24k</span><span class="value gold">${fmtMoney(cg24k)}/g</span></div>
-    ${sobrante24kRow}
-    ${reciclRow}
-    <div class="result-row"><span class="label">Total oro puro disponible (24k equiv.)</span><span class="value gold">${fmtNum(totalFino)} g</span></div>
+    <h3>Composición de la Tanda</h3>
+    ${filas}
+    <div style="background:rgba(255,255,255,.06);border-radius:4px;height:10px;overflow:hidden;margin:12px 0;display:flex">
+      <div style="height:100%;width:${pctComprado.toFixed(1)}%;background:var(--gold);border-radius:4px 0 0 4px"></div>
+      ${barSob}
+      ${barRecic}
+    </div>
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;background:rgba(196,168,130,.08);border:1px solid rgba(196,168,130,.2);border-radius:8px;margin-top:4px">
+      <span style="font-size:13px;color:var(--text);font-weight:600">Total oro fino disponible (24k equiv.)</span>
+      <span style="font-size:22px;font-weight:700;color:var(--gold-lt)">${fmtNum(totalFino,4)} g</span>
+    </div>
+    ${cg24k > 0 ? `<div class="result-row" style="margin-top:8px"><span class="label">Costo / g de oro 24k</span><span class="value gold">${fmtMoney(cg24k)}/g</span></div>` : ''}
   `;
 }
 
