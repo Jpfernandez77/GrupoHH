@@ -365,6 +365,19 @@
   .imp-combined-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; }
   @media(max-width:600px) { .imp-combined-grid { grid-template-columns:1fr 1fr; } }
   .section-label { font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:.8px; font-weight:600; margin-bottom:12px; margin-top:4px; }
+
+  /* ── report tabs ── */
+  .rpt-tabs  { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:20px; border-bottom:1px solid var(--border); padding-bottom:12px; }
+  .rpt-tab   { background:none; border:1px solid var(--border); border-radius:6px; padding:7px 14px; font-size:13px; color:var(--muted); cursor:pointer; transition:all .15s; }
+  .rpt-tab:hover  { color:var(--text); border-color:var(--gold-dk); }
+  .rpt-tab.active { color:var(--gold-lt); border-color:var(--gold); background:rgba(196,168,130,.08); font-weight:600; }
+  .rpt-panel { display:none; }
+  .rpt-panel.active { display:block; }
+  .stats-5 { display:grid; grid-template-columns:repeat(5,1fr); gap:12px; margin-bottom:20px; }
+  @media(max-width:900px) { .stats-5 { grid-template-columns:repeat(3,1fr); } }
+  @media(max-width:600px) { .stats-5 { grid-template-columns:repeat(2,1fr); } }
+  .rend-bar-wrap { height:5px; background:rgba(255,255,255,.08); border-radius:3px; margin-top:5px; }
+  .rend-bar-fill { height:100%; border-radius:3px; }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
 </head>
@@ -447,6 +460,31 @@
         </div>
       </div>
 
+      <!-- Tendencias históricas -->
+      <div class="card" style="margin-bottom:20px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px">
+          <h3 style="margin:0">📈 Tendencias — Últimos 6 Meses</h3>
+        </div>
+        <div class="charts-grid" id="trends-section">
+          <div class="chart-card">
+            <h3>Piezas Producidas por Mes</h3>
+            <canvas id="chart-trend-piezas" height="200"></canvas>
+          </div>
+          <div class="chart-card">
+            <h3>Precio del Oro ($/g 24k promedio)</h3>
+            <canvas id="chart-trend-costo" height="200"></canvas>
+          </div>
+          <div class="chart-card">
+            <h3>Rendimiento Promedio (%)</h3>
+            <canvas id="chart-trend-rend" height="200"></canvas>
+          </div>
+          <div class="chart-card">
+            <h3>Tasa de Éxito — Impresiones (%)</h3>
+            <canvas id="chart-trend-exito" height="200"></canvas>
+          </div>
+        </div>
+      </div>
+
       <div id="sobrante-section" style="display:none"></div>
 
       <h3>Tandas Recientes</h3>
@@ -457,22 +495,73 @@
     <div id="page-reportes" class="page">
       <h2>Reportes</h2>
       <div class="card">
-        <h3>Rango de Fechas</h3>
-        <div class="grid-2">
-          <div class="field">
-            <label>Desde</label>
-            <input type="date" id="r-desde" />
+        <!-- Tabs de reportes -->
+        <div class="rpt-tabs">
+          <button class="rpt-tab active" onclick="switchRptTab('tandas')">📋 Tandas</button>
+          <button class="rpt-tab" onclick="switchRptTab('impresiones')">🖨 Impresiones</button>
+          <button class="rpt-tab" onclick="switchRptTab('costos')">💰 Costos</button>
+          <button class="rpt-tab" onclick="switchRptTab('rendimiento')">📉 Rendimiento</button>
+          <button class="rpt-tab" onclick="switchRptTab('sobrante')">♻️ Sobrante</button>
+        </div>
+
+        <!-- TAB: TANDAS (existing) -->
+        <div id="rpt-panel-tandas" class="rpt-panel active">
+          <div class="grid-2">
+            <div class="field"><label>Desde</label><input type="date" id="r-desde" /></div>
+            <div class="field"><label>Hasta</label><input type="date" id="r-hasta" /></div>
           </div>
-          <div class="field">
-            <label>Hasta</label>
-            <input type="date" id="r-hasta" />
+          <div class="actions" style="margin-top:16px">
+            <button class="btn btn-gold" onclick="generarReporte()">Ver Reporte</button>
+            <button class="btn btn-outline" id="btn-csv" style="display:none" onclick="exportarCSV()">⬇ Exportar CSV</button>
           </div>
         </div>
-        <div class="actions" style="margin-top:16px">
-          <button class="btn btn-gold" onclick="generarReporte()">Ver Reporte</button>
-          <button class="btn btn-outline" id="btn-csv" style="display:none" onclick="exportarCSV()">
-            ⬇ Exportar CSV
-          </button>
+
+        <!-- TAB: IMPRESIONES -->
+        <div id="rpt-panel-impresiones" class="rpt-panel">
+          <p style="color:var(--muted);font-size:13px;margin-bottom:14px">Estadísticas de lotes de impresión 3D por rango de fechas.</p>
+          <div class="grid-2">
+            <div class="field"><label>Desde</label><input type="date" id="ri-desde" /></div>
+            <div class="field"><label>Hasta</label><input type="date" id="ri-hasta" /></div>
+          </div>
+          <div class="actions" style="margin-top:16px">
+            <button class="btn btn-gold" onclick="generarRptImpresiones()">Ver Reporte</button>
+            <button class="btn btn-outline" id="btn-csv-imp" style="display:none" onclick="exportarCSVImp()">⬇ Exportar CSV</button>
+          </div>
+        </div>
+
+        <!-- TAB: COSTOS COMBINADOS -->
+        <div id="rpt-panel-costos" class="rpt-panel">
+          <p style="color:var(--muted);font-size:13px;margin-bottom:14px">Costo real por pieza = impresión + vaciado + oro. Solo aparecen impresiones vinculadas a una tanda completada.</p>
+          <div class="grid-2">
+            <div class="field"><label>Desde</label><input type="date" id="rc-desde" /></div>
+            <div class="field"><label>Hasta</label><input type="date" id="rc-hasta" /></div>
+          </div>
+          <div class="actions" style="margin-top:16px">
+            <button class="btn btn-gold" onclick="generarRptCostos()">Ver Reporte</button>
+            <button class="btn btn-outline" id="btn-csv-cost" style="display:none" onclick="exportarCSVCostos()">⬇ Exportar CSV</button>
+          </div>
+        </div>
+
+        <!-- TAB: RENDIMIENTO / MERMA -->
+        <div id="rpt-panel-rendimiento" class="rpt-panel">
+          <p style="color:var(--muted);font-size:13px;margin-bottom:14px">Rendimiento del proceso: cuánto oro fino entra vs cuánto sale como piezas (merma por fundición).</p>
+          <div class="grid-2">
+            <div class="field"><label>Desde</label><input type="date" id="rr-desde" /></div>
+            <div class="field"><label>Hasta</label><input type="date" id="rr-hasta" /></div>
+          </div>
+          <div class="actions" style="margin-top:16px">
+            <button class="btn btn-gold" onclick="generarRptRendimiento()">Ver Reporte</button>
+            <button class="btn btn-outline" id="btn-csv-rend" style="display:none" onclick="exportarCSVRend()">⬇ Exportar CSV</button>
+          </div>
+        </div>
+
+        <!-- TAB: INVENTARIO SOBRANTE -->
+        <div id="rpt-panel-sobrante" class="rpt-panel">
+          <p style="color:var(--muted);font-size:13px;margin-bottom:14px">Inventario de todo el oro sobrante: cuánto se generó, cuánto se reutilizó y cuánto queda disponible.</p>
+          <div class="actions">
+            <button class="btn btn-gold" onclick="generarRptSobrante()">Ver Inventario</button>
+            <button class="btn btn-outline" id="btn-csv-sob" style="display:none" onclick="exportarCSVSob()">⬇ Exportar CSV</button>
+          </div>
         </div>
       </div>
       <div id="reporte-preview"></div>
@@ -1393,6 +1482,8 @@ function renderDashboard() {
     }
   }
 
+  renderTendencias();
+
   const recientes = [...d.tandas].reverse().slice(0, 5);
   const el = document.getElementById('recent-list');
   if (!recientes.length) {
@@ -1579,10 +1670,29 @@ let _reporteTandas = [];
 function initReportes() {
   const hoy = today();
   const primerDia = hoy.slice(0, 7) + '-01';
-  if (!document.getElementById('r-desde').value) document.getElementById('r-desde').value = primerDia;
-  if (!document.getElementById('r-hasta').value) document.getElementById('r-hasta').value = hoy;
+  ['r-desde','ri-desde','rc-desde','rr-desde'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el && !el.value) el.value = primerDia;
+  });
+  ['r-hasta','ri-hasta','rc-hasta','rr-hasta'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el && !el.value) el.value = hoy;
+  });
   document.getElementById('reporte-preview').innerHTML = '';
   document.getElementById('btn-csv').style.display = 'none';
+}
+
+let _activeRptTab = 'tandas';
+function switchRptTab(tab) {
+  _activeRptTab = tab;
+  document.querySelectorAll('.rpt-tab').forEach(b => {
+    const tabs = ['tandas','impresiones','costos','rendimiento','sobrante'];
+    const idx  = [...document.querySelectorAll('.rpt-tab')].indexOf(b);
+    b.classList.toggle('active', tabs[idx] === tab);
+  });
+  document.querySelectorAll('.rpt-panel').forEach(p => p.classList.remove('active'));
+  document.getElementById(`rpt-panel-${tab}`).classList.add('active');
+  document.getElementById('reporte-preview').innerHTML = '';
 }
 
 function generarReporte() {
@@ -1723,6 +1833,432 @@ function exportarCSV() {
   a.click();
   document.body.removeChild(a);
   toast('CSV exportado ✓');
+}
+
+// ── REPORTE: IMPRESIONES ──────────────────────────────────────────────────────
+let _rptImps = [];
+function generarRptImpresiones() {
+  const desde = document.getElementById('ri-desde').value;
+  const hasta  = document.getElementById('ri-hasta').value;
+  if (!desde || !hasta) { toast('Selecciona un rango de fechas', 'var(--red)'); return; }
+  const d  = getData();
+  _rptImps = d.impresiones.filter(i => i.fecha >= desde && i.fecha <= hasta);
+  const el = document.getElementById('reporte-preview');
+
+  if (!_rptImps.length) {
+    el.innerHTML = `<div class="empty" style="padding:40px"><div class="big">📭</div><p>No hay impresiones en ese rango.</p></div>`;
+    document.getElementById('btn-csv-imp').style.display = 'none';
+    return;
+  }
+
+  const totalPiezas = _rptImps.reduce((s,i) => s + (i.total_piezas||0), 0);
+  const totalBuenas = _rptImps.filter(i=>i.buenas!=null).reduce((s,i)=>s+i.buenas, 0);
+  const totalRotas  = _rptImps.filter(i=>i.rotas !=null).reduce((s,i)=>s+i.rotas,  0);
+  const totalCosto  = _rptImps.reduce((s,i) => s + (i.costo_total||0), 0);
+  const conExito = _rptImps.filter(i=>i.tasa_exito!=null);
+  const avgExito = conExito.length ? (conExito.reduce((s,i)=>s+i.tasa_exito,0)/conExito.length*100).toFixed(1) : null;
+  const conCpp   = _rptImps.filter(i=>i.costo_por_pieza_buena!=null);
+  const avgCpp   = conCpp.length ? conCpp.reduce((s,i)=>s+i.costo_por_pieza_buena,0)/conCpp.length : null;
+  const exitoColor = avgExito!==null ? (parseFloat(avgExito)>=90?'var(--green)':parseFloat(avgExito)>=70?'var(--gold)':'var(--red)') : 'var(--muted)';
+
+  const kTotals = {'10':{p:0,b:0,r:0},'14':{p:0,b:0,r:0},'18':{p:0,b:0,r:0}};
+  _rptImps.forEach(imp => {
+    if (!imp.kilates) return;
+    ['10','14','18'].forEach(k => {
+      const kd = imp.kilates[k]; if (!kd) return;
+      kTotals[k].p += kd.total||0;
+      kTotals[k].b += kd.buenas||0;
+      kTotals[k].r += kd.rotas||0;
+    });
+  });
+
+  el.innerHTML = `
+    <div class="card" style="margin-top:20px">
+      <h3>Impresiones — ${desde} al ${hasta}</h3>
+      <div class="stats-5">
+        <div class="stat-card"><div class="s-label">Lotes</div><div class="s-value">${_rptImps.length}</div><div class="s-sub">${totalPiezas} piezas</div></div>
+        <div class="stat-card"><div class="s-label">Buenas ✅</div><div class="s-value" style="color:var(--green)">${totalBuenas}</div><div class="s-sub">${totalRotas} rotas/defectos</div></div>
+        <div class="stat-card"><div class="s-label">Tasa Éxito Prom.</div><div class="s-value" style="color:${exitoColor}">${avgExito!==null?avgExito+'%':'—'}</div></div>
+        <div class="stat-card"><div class="s-label">Costo/pieza buena</div><div class="s-value" style="font-size:18px">${avgCpp?fmtMoney(avgCpp):'—'}</div></div>
+        <div class="stat-card"><div class="s-label">Costo Total</div><div class="s-value" style="font-size:18px">${fmtMoney(totalCosto)}</div></div>
+      </div>
+      <h3 style="margin-top:4px">Desglose por Kilataje</h3>
+      <table class="rpt-table"><thead><tr><th>Kilate</th><th class="num">Piezas</th><th class="num">Buenas</th><th class="num">Rotas</th><th class="num">Tasa Éxito</th></tr></thead>
+      <tbody>${['10','14','18'].map(k=>{
+        const kt=kTotals[k]; if(!kt.p) return '';
+        const pct=kt.p>0&&kt.b>0?(kt.b/kt.p*100).toFixed(1):null;
+        const c=pct!==null?(pct>=90?'var(--green)':pct>=70?'var(--gold)':'var(--red)'):'var(--muted)';
+        return `<tr><td class="cod">${k}k</td><td class="num">${kt.p}</td><td class="num" style="color:var(--green)">${kt.b||'—'}</td><td class="num" style="color:var(--red)">${kt.r||'—'}</td><td class="num" style="color:${c}">${pct!==null?pct+'%':'—'}</td></tr>`;
+      }).join('')}</tbody></table>
+    </div>
+    <div class="card" style="margin-top:0">
+      <h3>Detalle de Impresiones</h3>
+      <div style="overflow-x:auto"><table class="rpt-table">
+        <thead><tr><th>Código</th><th>Fecha</th><th>Nombre</th><th>Material</th><th class="num">Piezas</th><th class="num">Buenas</th><th class="num">Rotas</th><th class="num">Tasa</th><th class="num">Costo Total</th><th class="num">Costo/pieza buena</th></tr></thead>
+        <tbody>${_rptImps.map(imp=>{
+          const pct=imp.tasa_exito!=null?(imp.tasa_exito*100).toFixed(1):null;
+          const c=pct!==null?(pct>=90?'var(--green)':pct>=70?'var(--gold)':'var(--red)'):'var(--muted)';
+          return `<tr><td class="cod">${imp.codigo||'—'}</td><td>${imp.fecha}</td><td>${imp.nombre}</td><td>${imp.material||'—'}</td><td class="num">${imp.total_piezas||0}</td><td class="num" style="color:var(--green)">${imp.buenas!=null?imp.buenas:'—'}</td><td class="num" style="color:var(--red)">${imp.rotas!=null?imp.rotas:'—'}</td><td class="num" style="color:${c}">${pct!==null?pct+'%':'—'}</td><td class="num">${fmtMoney(imp.costo_total)}</td><td class="num">${imp.costo_por_pieza_buena!=null?fmtMoney(imp.costo_por_pieza_buena):'—'}</td></tr>`;
+        }).join('')}</tbody>
+      </table></div>
+    </div>`;
+  document.getElementById('btn-csv-imp').style.display = 'inline-flex';
+}
+function exportarCSVImp() {
+  if (!_rptImps.length) return;
+  const cols = ['Codigo','Fecha','Nombre','Material','Total Piezas','Buenas','Rotas','Tasa Exito %','10k Piezas','14k Piezas','18k Piezas','Costo Total ($)','Costo/pieza ($)','Costo/pieza buena ($)'];
+  const rows = _rptImps.map(i => [
+    i.codigo||'', i.fecha, i.nombre, i.material||'',
+    i.total_piezas, i.buenas??'', i.rotas??'',
+    i.tasa_exito!=null?(i.tasa_exito*100).toFixed(1):'',
+    i.kilates?.['10']?.total||0, i.kilates?.['14']?.total||0, i.kilates?.['18']?.total||0,
+    i.costo_total, i.costo_por_pieza??'', i.costo_por_pieza_buena??''
+  ]);
+  const desde = document.getElementById('ri-desde').value;
+  const hasta  = document.getElementById('ri-hasta').value;
+  dlCSV(cols, rows, `reporte_impresiones_${desde}_${hasta}.csv`);
+}
+
+// ── REPORTE: COSTOS COMBINADOS ────────────────────────────────────────────────
+let _rptCostos = [];
+function generarRptCostos() {
+  const desde = document.getElementById('rc-desde').value;
+  const hasta  = document.getElementById('rc-hasta').value;
+  if (!desde || !hasta) { toast('Selecciona un rango', 'var(--red)'); return; }
+  const d  = getData();
+  const el = document.getElementById('reporte-preview');
+  const imps = d.impresiones.filter(i => i.fecha >= desde && i.fecha <= hasta && i.codigo);
+  _rptCostos = imps.map(imp => {
+    const tanda = d.tandas.find(t => t.impresion_vinculada === imp.codigo && t.completada && t.completacion);
+    if (!tanda) return null;
+    const buenas   = imp.buenas;
+    const costoImp = imp.costo_total||0;
+    const costoVac = tanda.costo_vaciado||0;
+    const costoOro = tanda.costo_total||0;
+    const costoTot = costoImp + costoVac + costoOro;
+    const cppComb  = buenas > 0 ? costoTot  / buenas : null;
+    const cpp_imp  = buenas > 0 ? costoImp  / buenas : null;
+    const cpp_vac  = buenas > 0 ? costoVac  / buenas : null;
+    const cpp_oro  = buenas > 0 ? costoOro  / buenas : null;
+    return { imp, tanda, buenas, costoImp, costoVac, costoOro, costoTot, cppComb, cpp_imp, cpp_vac, cpp_oro };
+  }).filter(Boolean);
+
+  if (!_rptCostos.length) {
+    el.innerHTML = `<div class="empty" style="padding:40px"><div class="big">📭</div><p>No hay impresiones vinculadas a tandas completadas en ese rango.</p></div>`;
+    document.getElementById('btn-csv-cost').style.display = 'none';
+    return;
+  }
+
+  const conComb  = _rptCostos.filter(r=>r.cppComb);
+  const avgComb  = conComb.length ? conComb.reduce((s,r)=>s+r.cppComb,0)/conComb.length : null;
+  const mejor    = conComb.length ? conComb.reduce((b,r)=>r.cppComb<b.cppComb?r:b,conComb[0]) : null;
+  const peor     = conComb.length ? conComb.reduce((b,r)=>r.cppComb>b.cppComb?r:b,conComb[0]) : null;
+  const totImp   = _rptCostos.reduce((s,r)=>s+r.costoImp,0);
+  const totVac   = _rptCostos.reduce((s,r)=>s+r.costoVac,0);
+  const totOro   = _rptCostos.reduce((s,r)=>s+r.costoOro,0);
+  const totTot   = totImp + totVac + totOro;
+
+  el.innerHTML = `
+    <div class="card" style="margin-top:20px">
+      <h3>Costos Combinados — ${desde} al ${hasta}</h3>
+      <div class="rpt-summary">
+        <div class="stat-card"><div class="s-label">Lotes vinculados</div><div class="s-value">${_rptCostos.length}</div></div>
+        <div class="stat-card"><div class="s-label">Costo combinado prom.</div><div class="s-value" style="font-size:18px">${avgComb?fmtMoney(avgComb):'—'}</div><div class="s-sub">por pieza buena</div></div>
+        <div class="stat-card"><div class="s-label">Mejor lote</div><div class="s-value" style="font-size:16px;color:var(--green)">${mejor?fmtMoney(mejor.cppComb):'—'}</div><div class="s-sub">${mejor?.imp?.nombre||''}</div></div>
+      </div>
+      <h3 style="margin-top:4px">Desglose total de costos</h3>
+      <table class="rpt-table" style="margin-bottom:16px">
+        <thead><tr><th>Concepto</th><th class="num">Total</th><th class="num">% del total</th></tr></thead>
+        <tbody>
+          <tr><td>🖨 Impresión</td><td class="num">${fmtMoney(totImp)}</td><td class="num">${totTot>0?(totImp/totTot*100).toFixed(1):0}%</td></tr>
+          <tr><td>🔥 Vaciado / Fundición</td><td class="num">${fmtMoney(totVac)}</td><td class="num">${totTot>0?(totVac/totTot*100).toFixed(1):0}%</td></tr>
+          <tr><td>🪙 Oro</td><td class="num">${fmtMoney(totOro)}</td><td class="num">${totTot>0?(totOro/totTot*100).toFixed(1):0}%</td></tr>
+          <tr style="font-weight:700;border-top:1px solid var(--border)"><td>TOTAL</td><td class="num">${fmtMoney(totTot)}</td><td class="num">100%</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="card" style="margin-top:0">
+      <h3>Detalle por lote</h3>
+      <div style="overflow-x:auto"><table class="rpt-table">
+        <thead><tr><th>IMP</th><th>Tanda</th><th>Nombre</th><th>Fecha</th><th class="num">Buenas</th><th class="num">$/imp</th><th class="num">$/vac</th><th class="num">$/oro</th><th class="num">$/combinado</th></tr></thead>
+        <tbody>${_rptCostos.map(r=>`<tr>
+          <td class="cod">${r.imp.codigo}</td><td class="cod">${r.tanda.codigo}</td><td>${r.imp.nombre}</td><td>${r.imp.fecha}</td>
+          <td class="num">${r.buenas??'—'}</td>
+          <td class="num">${r.cpp_imp!=null?fmtMoney(r.cpp_imp):'—'}</td>
+          <td class="num">${r.cpp_vac!=null?fmtMoney(r.cpp_vac):'—'}</td>
+          <td class="num">${r.cpp_oro!=null?fmtMoney(r.cpp_oro):'—'}</td>
+          <td class="num" style="font-weight:700;color:var(--gold-lt)">${r.cppComb!=null?fmtMoney(r.cppComb):'—'}</td>
+        </tr>`).join('')}</tbody>
+      </table></div>
+    </div>`;
+  document.getElementById('btn-csv-cost').style.display = 'inline-flex';
+}
+function exportarCSVCostos() {
+  if (!_rptCostos.length) return;
+  const cols = ['IMP Código','Tanda Código','Nombre','Fecha','Piezas Buenas','Costo Impresión ($)','Costo Vaciado ($)','Costo Oro ($)','Costo Total ($)','$/pieza imp','$/pieza vac','$/pieza oro','$/pieza combinado'];
+  const rows = _rptCostos.map(r=>[
+    r.imp.codigo, r.tanda.codigo, r.imp.nombre, r.imp.fecha,
+    r.buenas??'', r.costoImp, r.costoVac, r.costoOro, r.costoTot,
+    r.cpp_imp?.toFixed(4)??'', r.cpp_vac?.toFixed(4)??'', r.cpp_oro?.toFixed(4)??'', r.cppComb?.toFixed(4)??''
+  ]);
+  const desde = document.getElementById('rc-desde').value;
+  const hasta  = document.getElementById('rc-hasta').value;
+  dlCSV(cols, rows, `reporte_costos_${desde}_${hasta}.csv`);
+}
+
+// ── REPORTE: RENDIMIENTO ──────────────────────────────────────────────────────
+let _rptRend = [];
+function generarRptRendimiento() {
+  const desde = document.getElementById('rr-desde').value;
+  const hasta  = document.getElementById('rr-hasta').value;
+  if (!desde || !hasta) { toast('Selecciona un rango', 'var(--red)'); return; }
+  const d  = getData();
+  _rptRend = d.tandas.filter(t => t.fecha >= desde && t.fecha <= hasta && t.completada && t.completacion);
+  const el = document.getElementById('reporte-preview');
+
+  if (!_rptRend.length) {
+    el.innerHTML = `<div class="empty" style="padding:40px"><div class="big">📭</div><p>No hay tandas completadas en ese rango.</p></div>`;
+    document.getElementById('btn-csv-rend').style.display = 'none';
+    return;
+  }
+
+  const rows = _rptRend.map(t => {
+    const fino    = finoTanda(t);
+    const salida  = t.completacion.total_salida_g || 0;
+    const sobro   = t.completacion.sobro_g || 0;
+    const merma   = Math.max(0, fino - salida - sobro);
+    const mermaPct= fino > 0 ? merma / fino * 100 : 0;
+    const rend    = t.completacion.rendimiento_pct;
+    return { t, fino, salida, sobro, merma, mermaPct, rend };
+  });
+
+  const avgRend   = rows.reduce((s,r)=>s+r.rend, 0) / rows.length;
+  const totalFino = rows.reduce((s,r)=>s+r.fino,  0);
+  const totalMerma= rows.reduce((s,r)=>s+r.merma, 0);
+  const mejor     = rows.reduce((b,r)=>r.rend>b.rend?r:b, rows[0]);
+  const peor      = rows.reduce((b,r)=>r.rend<b.rend?r:b, rows[0]);
+  const rc = r => r>=95?'var(--green)':r>=85?'var(--gold)':'var(--red)';
+
+  el.innerHTML = `
+    <div class="card" style="margin-top:20px">
+      <h3>Rendimiento / Merma — ${desde} al ${hasta}</h3>
+      <div class="stats-5">
+        <div class="stat-card"><div class="s-label">Rendimiento promedio</div><div class="s-value" style="color:${rc(avgRend)}">${fmtNum(avgRend,1)}%</div><div class="s-sub">${rows.length} tandas</div></div>
+        <div class="stat-card"><div class="s-label">Fino total procesado</div><div class="s-value" style="font-size:20px">${fmtNum(totalFino)} g</div></div>
+        <div class="stat-card"><div class="s-label">Merma total</div><div class="s-value" style="font-size:18px;color:var(--red)">${fmtNum(totalMerma,4)} g</div><div class="s-sub">${fmtNum(totalFino>0?totalMerma/totalFino*100:0,2)}% del fino</div></div>
+        <div class="stat-card"><div class="s-label">Mejor tanda</div><div class="s-value" style="font-size:18px;color:var(--green)">${fmtNum(mejor.rend,1)}%</div><div class="s-sub">${mejor.t.codigo}</div></div>
+        <div class="stat-card"><div class="s-label">Peor tanda</div><div class="s-value" style="font-size:18px;color:var(--red)">${fmtNum(peor.rend,1)}%</div><div class="s-sub">${peor.t.codigo}</div></div>
+      </div>
+    </div>
+    <div class="card" style="margin-top:0">
+      <h3>Detalle por Tanda</h3>
+      <div style="overflow-x:auto"><table class="rpt-table">
+        <thead><tr><th>Código</th><th>Fecha</th><th class="num">Fino entrada (g)</th><th class="num">Producido (g)</th><th class="num">Sobrante (g)</th><th class="num">Merma (g)</th><th class="num">Merma %</th><th class="num">Rendimiento</th></tr></thead>
+        <tbody>${rows.map(r=>`<tr>
+          <td class="cod">${r.t.codigo}</td><td>${r.t.fecha}</td>
+          <td class="num">${fmtNum(r.fino,4)}</td><td class="num">${fmtNum(r.salida,4)}</td><td class="num">${fmtNum(r.sobro,4)}</td>
+          <td class="num" style="color:var(--red)">${fmtNum(r.merma,4)}</td>
+          <td class="num" style="color:var(--red)">${fmtNum(r.mermaPct,2)}%</td>
+          <td class="num"><span style="font-weight:700;color:${rc(r.rend)}">${fmtNum(r.rend,1)}%</span>
+            <div class="rend-bar-wrap"><div class="rend-bar-fill" style="width:${Math.min(r.rend,100)}%;background:${rc(r.rend)}"></div></div>
+          </td>
+        </tr>`).join('')}</tbody>
+      </table></div>
+    </div>`;
+  document.getElementById('btn-csv-rend').style.display = 'inline-flex';
+}
+function exportarCSVRend() {
+  if (!_rptRend.length) return;
+  const cols = ['Código','Fecha','Fino Entrada (g)','Producido (g)','Sobrante (g)','Merma (g)','Merma (%)','Rendimiento (%)'];
+  const rows = _rptRend.map(t => {
+    const fino  = finoTanda(t);
+    const salida = t.completacion.total_salida_g||0;
+    const sobro  = t.completacion.sobro_g||0;
+    const merma  = Math.max(0, fino-salida-sobro);
+    return [t.codigo, t.fecha, fino.toFixed(4), salida.toFixed(4), sobro.toFixed(4), merma.toFixed(4), (fino>0?merma/fino*100:0).toFixed(2), t.completacion.rendimiento_pct.toFixed(2)];
+  });
+  const desde = document.getElementById('rr-desde').value;
+  const hasta  = document.getElementById('rr-hasta').value;
+  dlCSV(cols, rows, `reporte_rendimiento_${desde}_${hasta}.csv`);
+}
+
+// ── REPORTE: INVENTARIO SOBRANTE ──────────────────────────────────────────────
+let _rptSob = [];
+function generarRptSobrante() {
+  const d  = getData();
+  const el = document.getElementById('reporte-preview');
+  const tandasConSobrante = d.tandas.filter(t => t.completada && t.completacion && t.completacion.sobro_g > 0.001);
+
+  _rptSob = tandasConSobrante.map(t => {
+    const usado = d.tandas
+      .filter(x => x.origen_reciclado === t.codigo)
+      .reduce((s,x) => s + (x.sobrante_anterior_g||0), 0);
+    const disponible = Math.max(0, t.completacion.sobro_g - usado);
+    return { t, generado: t.completacion.sobro_g, kilate: t.completacion.kilate_sobro, usado, disponible };
+  });
+
+  if (!_rptSob.length) {
+    el.innerHTML = `<div class="empty" style="padding:40px"><div class="big">♻️</div><p>No hay sobrantes registrados todavía.</p></div>`;
+    document.getElementById('btn-csv-sob').style.display = 'none';
+    return;
+  }
+
+  const totGen  = _rptSob.reduce((s,r)=>s+r.generado,   0);
+  const totUsado= _rptSob.reduce((s,r)=>s+r.usado,      0);
+  const totDisp = _rptSob.reduce((s,r)=>s+r.disponible, 0);
+
+  el.innerHTML = `
+    <div class="card" style="margin-top:20px">
+      <h3>Inventario de Sobrante</h3>
+      <div class="rpt-summary">
+        <div class="stat-card"><div class="s-label">Total generado</div><div class="s-value" style="font-size:20px">${fmtNum(totGen,4)} g</div></div>
+        <div class="stat-card"><div class="s-label">Usado / reciclado</div><div class="s-value" style="font-size:20px;color:var(--blue)">${fmtNum(totUsado,4)} g</div></div>
+        <div class="stat-card"><div class="s-label">Disponible ahora</div><div class="s-value" style="font-size:20px;color:var(--gold)">${fmtNum(totDisp,4)} g</div></div>
+      </div>
+    </div>
+    <div class="card" style="margin-top:0">
+      <h3>Por Tanda</h3>
+      <div style="overflow-x:auto"><table class="rpt-table">
+        <thead><tr><th>Tanda</th><th>Fecha Completado</th><th class="num">Sobrante (g)</th><th class="num">Kilataje</th><th class="num">Usado (g)</th><th class="num">Disponible (g)</th><th>Estado</th></tr></thead>
+        <tbody>${_rptSob.map(r=>`<tr>
+          <td class="cod">${r.t.codigo}</td>
+          <td>${r.t.completacion?.fecha_completacion||r.t.fecha}</td>
+          <td class="num">${fmtNum(r.generado,4)}</td>
+          <td class="num">${r.kilate?fmtNum(r.kilate,2)+'k':'—'}</td>
+          <td class="num" style="color:var(--blue)">${fmtNum(r.usado,4)}</td>
+          <td class="num" style="font-weight:700;color:${r.disponible>0.001?'var(--gold)':'var(--muted)'}">${fmtNum(r.disponible,4)}</td>
+          <td>${r.disponible<0.001?'<span style="color:var(--muted)">Agotado</span>':'<span style="color:var(--gold)">Disponible</span>'}</td>
+        </tr>`).join('')}</tbody>
+      </table></div>
+    </div>`;
+  document.getElementById('btn-csv-sob').style.display = 'inline-flex';
+}
+function exportarCSVSob() {
+  if (!_rptSob.length) return;
+  const cols = ['Tanda','Fecha Completado','Sobrante (g)','Kilataje','Usado (g)','Disponible (g)'];
+  const rows = _rptSob.map(r => [
+    r.t.codigo, r.t.completacion?.fecha_completacion||r.t.fecha,
+    r.generado.toFixed(4), r.kilate?r.kilate.toFixed(2):'',
+    r.usado.toFixed(4), r.disponible.toFixed(4)
+  ]);
+  dlCSV(cols, rows, 'inventario_sobrante.csv');
+}
+
+// ── Helper CSV ────────────────────────────────────────────────────────────────
+function dlCSV(cols, rows, filename) {
+  const csv = [cols, ...rows]
+    .map(r => r.map(v => `"${String(v??'').replace(/"/g,'""')}"`).join(','))
+    .join('\r\n');
+  const a = document.createElement('a');
+  a.href = 'data:text/csv;charset=utf-8,﻿' + encodeURIComponent(csv);
+  a.download = filename;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  toast('CSV exportado ✓');
+}
+
+// ── TENDENCIAS DASHBOARD ──────────────────────────────────────────────────────
+let _trendCharts = {};
+function mkTrendChart(id, type, data, extraOpts = {}) {
+  if (_trendCharts[id]) _trendCharts[id].destroy();
+  const el = document.getElementById(id); if (!el) return;
+  const baseScales = {
+    x: { ticks:{ color:'#8a8070' }, grid:{ color:'rgba(255,255,255,.05)' } },
+    y: { ticks:{ color:'#8a8070' }, grid:{ color:'rgba(255,255,255,.05)' }, beginAtZero:true },
+  };
+  _trendCharts[id] = new Chart(el.getContext('2d'), {
+    type,
+    data,
+    options: {
+      responsive: true,
+      plugins: { legend:{ labels:{ color:'#ede8e0', font:{ size:11 } } } },
+      scales: baseScales,
+      ...extraOpts,
+    },
+  });
+}
+
+function renderTendencias() {
+  const d = getData();
+
+  // Últimos 6 meses
+  const months = [];
+  const now = new Date();
+  for (let i = 5; i >= 0; i--) {
+    const d2 = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    months.push({
+      ym:    d2.toISOString().slice(0, 7),
+      label: d2.toLocaleDateString('es', { month:'short', year:'2-digit' }),
+    });
+  }
+
+  const monthData = months.map(({ ym }) => {
+    const tandas     = d.tandas.filter(t => t.fecha.slice(0,7) === ym);
+    const completadas= tandas.filter(t => t.completada && t.completacion);
+    let p10=0, p14=0, p18=0;
+    completadas.forEach(t => {
+      p10 += t.completacion.produccion['10'].piezas||0;
+      p14 += t.completacion.produccion['14'].piezas||0;
+      p18 += t.completacion.produccion['18'].piezas||0;
+    });
+    const oro   = tandas.reduce((s,t)=>s+t.oro_pedido_g,0);
+    const costo = tandas.reduce((s,t)=>s+t.costo_total,  0);
+    const rends = completadas.map(t=>t.completacion.rendimiento_pct).filter(v=>v!=null);
+    const avgRend = rends.length ? rends.reduce((s,v)=>s+v,0)/rends.length : null;
+    return { p10, p14, p18, costog: oro>0?costo/oro:null, avgRend };
+  });
+
+  const impData = months.map(({ ym }) => {
+    const imps = d.impresiones.filter(i => i.fecha.slice(0,7) === ym && i.tasa_exito!=null);
+    return imps.length ? imps.reduce((s,i)=>s+i.tasa_exito,0)/imps.length*100 : null;
+  });
+
+  const labels = months.map(m => m.label);
+  const gold3  = ['rgba(196,168,130,.9)','rgba(212,180,90,.9)','rgba(237,232,224,.8)'];
+  const blue   = 'rgba(106,180,240,.9)';
+  const green  = 'rgba(106,175,130,.9)';
+  const yellow = 'rgba(240,200,74,.9)';
+
+  // Chart 1 — piezas apiladas
+  mkTrendChart('chart-trend-piezas', 'bar', {
+    labels,
+    datasets: [
+      { label:'10k', data:monthData.map(m=>m.p10), backgroundColor:gold3[0], stack:'s' },
+      { label:'14k', data:monthData.map(m=>m.p14), backgroundColor:gold3[1], stack:'s' },
+      { label:'18k', data:monthData.map(m=>m.p18), backgroundColor:gold3[2], stack:'s' },
+    ],
+  }, { scales:{
+    x:{ stacked:true, ticks:{color:'#8a8070'}, grid:{color:'rgba(255,255,255,.05)'} },
+    y:{ stacked:true, beginAtZero:true, ticks:{color:'#8a8070'}, grid:{color:'rgba(255,255,255,.05)'} },
+  }});
+
+  // Chart 2 — precio/g
+  mkTrendChart('chart-trend-costo', 'line', {
+    labels,
+    datasets:[{ label:'$/g 24k', data:monthData.map(m=>m.costog!=null?+m.costog.toFixed(2):null),
+      borderColor:blue, backgroundColor:'rgba(106,180,240,.1)', tension:.35, fill:true, pointRadius:4, spanGaps:true }],
+  });
+
+  // Chart 3 — rendimiento
+  const allRends = monthData.map(m=>m.avgRend).filter(v=>v!=null);
+  const minRend  = allRends.length ? Math.floor(Math.min(...allRends) - 3) : 0;
+  mkTrendChart('chart-trend-rend', 'line', {
+    labels,
+    datasets:[{ label:'Rendimiento %', data:monthData.map(m=>m.avgRend!=null?+m.avgRend.toFixed(1):null),
+      borderColor:green, backgroundColor:'rgba(106,175,130,.1)', tension:.35, fill:true, pointRadius:4, spanGaps:true }],
+  }, { scales:{
+    x:{ticks:{color:'#8a8070'},grid:{color:'rgba(255,255,255,.05)'}},
+    y:{ticks:{color:'#8a8070'},grid:{color:'rgba(255,255,255,.05)'},beginAtZero:false, min:Math.max(0,minRend), max:100},
+  }});
+
+  // Chart 4 — tasa éxito impresiones
+  mkTrendChart('chart-trend-exito', 'line', {
+    labels,
+    datasets:[{ label:'Éxito impr. %', data:impData.map(v=>v!=null?+v.toFixed(1):null),
+      borderColor:yellow, backgroundColor:'rgba(240,200,74,.1)', tension:.35, fill:true, pointRadius:4, spanGaps:true }],
+  }, { scales:{
+    x:{ticks:{color:'#8a8070'},grid:{color:'rgba(255,255,255,.05)'}},
+    y:{ticks:{color:'#8a8070'},grid:{color:'rgba(255,255,255,.05)'},beginAtZero:false, min:0, max:100},
+  }});
 }
 
 // ── TODAS LAS TANDAS ──────────────────────────────────────────────────────────
