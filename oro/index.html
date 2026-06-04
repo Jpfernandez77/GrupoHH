@@ -982,6 +982,7 @@ const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJ
 
 // ── caché en memoria ──────────────────────────────────────────────────────────
 let _data = null;
+let _editingImpId = null;   // id de la impresión que se está editando (null = nueva)
 
 const MULT_DEFAULT = { '10': 10, '14': 14, '18': 18 };
 
@@ -2840,8 +2841,18 @@ function guardarImpresion() {
   if (totalPiezas === 0)  { errEl.textContent = 'Ingresa al menos un kilataje con piezas impresas.'; errEl.style.display='block'; return; }
 
   const d = getData();
-  d.ultimo_imp = (d.ultimo_imp || 0) + 1;
-  const codigo = 'IMP-' + String(d.ultimo_imp).padStart(4, '0');
+
+  // ── Modo edición vs nuevo ──
+  let codigo, impId;
+  if (_editingImpId) {
+    const existing = d.impresiones.find(i => i.id === _editingImpId);
+    codigo = existing?.codigo || ('IMP-' + String((d.ultimo_imp || 0) + 1).padStart(4, '0'));
+    impId  = existing?.id     || ('IMP-' + fecha.replace(/-/g,'') + '-' + Date.now());
+  } else {
+    d.ultimo_imp = (d.ultimo_imp || 0) + 1;
+    codigo = 'IMP-' + String(d.ultimo_imp).padStart(4, '0');
+    impId  = 'IMP-' + fecha.replace(/-/g,'') + '-' + Date.now();
+  }
 
   // Kilate primario: el que tenga más piezas (para compatibilidad)
   const kilateObj = Object.entries(kilates).reduce(
@@ -2852,7 +2863,7 @@ function guardarImpresion() {
   const cpp_buena = buen > 0 ? costo / buen : null;
 
   const imp = {
-    id:                    'IMP-' + fecha.replace(/-/g,'') + '-' + Date.now(),
+    id:                    impId,
     codigo,
     fecha, nombre, material,
     kilates,                                          // nueva estructura por kilataje
@@ -2869,9 +2880,16 @@ function guardarImpresion() {
     notas,
   };
 
-  d.impresiones.push(imp);
+  if (_editingImpId) {
+    const idx = d.impresiones.findIndex(i => i.id === _editingImpId);
+    if (idx !== -1) d.impresiones[idx] = imp;
+    else d.impresiones.push(imp);
+  } else {
+    d.impresiones.push(imp);
+  }
+
   saveLocal();
-  // Sincronizar impresión a su tabla dedicada
+  // Sincronizar impresión a su tabla dedicada (upsert por código)
   syncGuardarImpresion(imp).catch(e => {
     console.error('sync imp:', e.message);
     setSyncStatus('error', e.message);
@@ -2879,12 +2897,19 @@ function guardarImpresion() {
   // Actualizar ultimo_imp en __config__
   syncImpresiones().catch(() => {});
 
-  toast(`${codigo} — "${nombre}" guardada ✓`);
+  const wasEditing = !!_editingImpId;
+  toast(`${codigo} — "${nombre}" ${wasEditing ? 'actualizada ✓' : 'guardada ✓'}`, wasEditing ? 'var(--blue)' : undefined);
   limpiarImpresion();
   renderImpresiones();
 }
 
 function limpiarImpresion() {
+  // Resetear estado de edición
+  _editingImpId = null;
+  document.getElementById('imp-editing-badge')?.remove();
+  const saveBtn = document.querySelector('#page-impresiones .btn.btn-gold');
+  if (saveBtn) saveBtn.textContent = 'Guardar Impresión';
+
   ['imp-fecha','imp-nombre','imp-costo','imp-notas']
     .forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
   const matEl = document.getElementById('imp-material');
@@ -2918,6 +2943,57 @@ function eliminarImpresion(id) {
   syncImpresiones().catch(() => {}); // actualizar ultimo_imp
   renderImpresiones();
   toast('Impresión eliminada', 'var(--red)');
+}
+
+function editarImpresion(id) {
+  const d   = getData();
+  const imp = d.impresiones.find(i => i.id === id);
+  if (!imp) return;
+
+  // Llenar campos básicos
+  document.getElementById('imp-fecha').value  = imp.fecha   || today();
+  document.getElementById('imp-nombre').value = imp.nombre  || '';
+  document.getElementById('imp-costo').value  = imp.costo_total != null ? imp.costo_total : '';
+  document.getElementById('imp-notas').value  = imp.notas   || '';
+  const matEl = document.getElementById('imp-material');
+  if (matEl) matEl.value = imp.material || 'resina';
+
+  // Limpiar campos por kilataje y rellenar
+  ['10','14','18'].forEach(k => {
+    const kd = imp.kilates?.[k] || {};
+    const total   = document.getElementById(`imp-${k}k-total`);
+    const buenas  = document.getElementById(`imp-${k}k-buenas`);
+    const rotas   = document.getElementById(`imp-${k}k-rotas`);
+    const peso    = document.getElementById(`imp-${k}k-peso`);
+    const est     = document.getElementById(`imp-${k}k-estimate`);
+    if (total)  total.value  = kd.total  != null && kd.total  > 0 ? kd.total  : '';
+    if (buenas) buenas.value = kd.buenas != null                  ? kd.buenas : '';
+    if (rotas)  rotas.value  = kd.rotas  != null                  ? kd.rotas  : '';
+    if (peso)   peso.value   = kd.peso_resina_g != null           ? kd.peso_resina_g : '';
+    if (est)    est.innerHTML = '';
+  });
+
+  // Recalcular previews
+  calcImpKaratesAll();
+
+  // Activar modo edición
+  _editingImpId = imp.id;
+
+  // Badge de edición encima del botón guardar
+  document.getElementById('imp-editing-badge')?.remove();
+  const errEl = document.getElementById('imp-error');
+  const badge = document.createElement('div');
+  badge.id = 'imp-editing-badge';
+  badge.style.cssText = 'background:rgba(106,180,240,.12);border:1px solid var(--blue);border-radius:6px;padding:8px 12px;font-size:13px;color:var(--blue);margin-top:8px;margin-bottom:4px;display:flex;align-items:center;gap:8px';
+  badge.innerHTML = `<span>✏️ Editando: <strong>${imp.codigo}</strong> — "${imp.nombre}"</span><button onclick="limpiarImpresion()" style="margin-left:auto;background:none;border:none;color:var(--muted);cursor:pointer;font-size:13px;padding:0 4px" title="Cancelar edición">✕ Cancelar</button>`;
+  errEl.parentNode.insertBefore(badge, errEl);
+
+  // Cambiar texto del botón
+  const saveBtn = document.querySelector('#page-impresiones .btn.btn-gold');
+  if (saveBtn) saveBtn.textContent = '✏️ Actualizar Impresión';
+
+  // Scroll al formulario
+  document.getElementById('imp-fecha')?.closest('.card')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 function renderImpresiones() {
@@ -3023,6 +3099,7 @@ function renderImpresiones() {
           <div class="kv" style="color:var(--green)">${fmtMoney(combCost)}</div>
           <div class="kl">total/pieza</div>
         </div>` : ''}
+        <button class="btn-delete" onclick="editarImpresion('${imp.id}')" title="Editar" style="color:var(--blue)">✏️</button>
         <button class="btn-delete" onclick="eliminarImpresion('${imp.id}')" title="Eliminar">🗑</button>
       </div>
     </div>`;
