@@ -434,7 +434,7 @@
                    color:var(--text);padding:6px 10px;font-size:13px;outline:none;cursor:pointer"
             onchange="renderMensual(this.value)" />
         </div>
-        <div class="stats-4" id="monthly-strip" style="margin-bottom:16px"></div>
+        <div class="stats-5" id="monthly-strip" style="margin-bottom:16px"></div>
         <div id="monthly-karat-table"></div>
         <div class="charts-grid" id="charts-section" style="display:none">
           <div class="chart-card">
@@ -1526,8 +1526,10 @@ function renderMensual(yearMonth) {
   const mErrorPct  = totalPiezas > 0 ? (totalMalas / totalPiezas * 100) : 0;
   const mErrColor  = mErrorPct === 0 ? 'var(--green)' : mErrorPct < 5 ? 'var(--gold)' : 'var(--red)';
 
-  const diasArr = completadas.map(t => diasTanda(t)).filter(d => d !== null);
-  const diasProm = diasArr.length > 0 ? diasArr.reduce((s,d) => s+d, 0) / diasArr.length : null;
+  const diasArr    = completadas.map(t => diasTanda(t)).filter(d => d !== null);
+  const diasProm   = diasArr.length > 0 ? diasArr.reduce((s,d) => s+d, 0) / diasArr.length : null;
+  const vacArr     = completadas.map(t => t.completacion?.dias_vaciado).filter(v => v != null);
+  const vacProm    = vacArr.length > 0 ? vacArr.reduce((s,d) => s+d, 0) / vacArr.length : null;
 
   document.getElementById('monthly-strip').innerHTML = `
     <div class="stat-card">
@@ -1554,6 +1556,11 @@ function renderMensual(yearMonth) {
       <div class="s-label">Tiempo prom. entrega</div>
       <div class="s-value" style="font-size:20px">${diasProm !== null ? fmtNum(diasProm,1)+' días' : '—'}</div>
       <div class="s-sub">${diasArr.length} tandas completadas</div>
+    </div>
+    <div class="stat-card">
+      <div class="s-label">⏱ Tiempo prom. vaciado</div>
+      <div class="s-value" style="font-size:20px;color:var(--blue)">${vacProm !== null ? fmtNum(vacProm,1)+' días' : '—'}</div>
+      <div class="s-sub">${vacArr.length} con fecha de vaciado</div>
     </div>
   `;
 
@@ -2023,20 +2030,23 @@ function generarRptRendimiento() {
   }
 
   const rows = _rptRend.map(t => {
-    const fino    = finoTanda(t);
-    const salida  = t.completacion.total_salida_g || 0;
-    const sobro   = t.completacion.sobro_g || 0;
-    const merma   = Math.max(0, fino - salida - sobro);
-    const mermaPct= fino > 0 ? merma / fino * 100 : 0;
-    const rend    = t.completacion.rendimiento_pct;
-    return { t, fino, salida, sobro, merma, mermaPct, rend };
+    const fino      = finoTanda(t);
+    const salida    = t.completacion.total_salida_g || 0;
+    const sobro     = t.completacion.sobro_g || 0;
+    const merma     = Math.max(0, fino - salida - sobro);
+    const mermaPct  = fino > 0 ? merma / fino * 100 : 0;
+    const rend      = t.completacion.rendimiento_pct;
+    const diasVac   = t.completacion.dias_vaciado ?? null;
+    return { t, fino, salida, sobro, merma, mermaPct, rend, diasVac };
   });
 
-  const avgRend   = rows.reduce((s,r)=>s+r.rend, 0) / rows.length;
-  const totalFino = rows.reduce((s,r)=>s+r.fino,  0);
-  const totalMerma= rows.reduce((s,r)=>s+r.merma, 0);
-  const mejor     = rows.reduce((b,r)=>r.rend>b.rend?r:b, rows[0]);
-  const peor      = rows.reduce((b,r)=>r.rend<b.rend?r:b, rows[0]);
+  const avgRend    = rows.reduce((s,r)=>s+r.rend, 0) / rows.length;
+  const totalFino  = rows.reduce((s,r)=>s+r.fino,  0);
+  const totalMerma = rows.reduce((s,r)=>s+r.merma, 0);
+  const mejor      = rows.reduce((b,r)=>r.rend>b.rend?r:b, rows[0]);
+  const peor       = rows.reduce((b,r)=>r.rend<b.rend?r:b, rows[0]);
+  const vacRows    = rows.filter(r=>r.diasVac!=null);
+  const avgVac     = vacRows.length ? vacRows.reduce((s,r)=>s+r.diasVac,0)/vacRows.length : null;
   const rc = r => r>=95?'var(--green)':r>=85?'var(--gold)':'var(--red)';
 
   el.innerHTML = `
@@ -2048,12 +2058,13 @@ function generarRptRendimiento() {
         <div class="stat-card"><div class="s-label">Merma total</div><div class="s-value" style="font-size:18px;color:var(--red)">${fmtNum(totalMerma,4)} g</div><div class="s-sub">${fmtNum(totalFino>0?totalMerma/totalFino*100:0,2)}% del fino</div></div>
         <div class="stat-card"><div class="s-label">Mejor tanda</div><div class="s-value" style="font-size:18px;color:var(--green)">${fmtNum(mejor.rend,1)}%</div><div class="s-sub">${mejor.t.codigo}</div></div>
         <div class="stat-card"><div class="s-label">Peor tanda</div><div class="s-value" style="font-size:18px;color:var(--red)">${fmtNum(peor.rend,1)}%</div><div class="s-sub">${peor.t.codigo}</div></div>
+        <div class="stat-card"><div class="s-label">⏱ Tiempo prom. vaciado</div><div class="s-value" style="font-size:18px;color:var(--blue)">${avgVac!=null?fmtNum(avgVac,1)+' días':'—'}</div><div class="s-sub">${vacRows.length} con fecha registrada</div></div>
       </div>
     </div>
     <div class="card" style="margin-top:0">
       <h3>Detalle por Tanda</h3>
       <div style="overflow-x:auto"><table class="rpt-table">
-        <thead><tr><th>Código</th><th>Fecha</th><th class="num">Fino entrada (g)</th><th class="num">Producido (g)</th><th class="num">Sobrante (g)</th><th class="num">Merma (g)</th><th class="num">Merma %</th><th class="num">Rendimiento</th></tr></thead>
+        <thead><tr><th>Código</th><th>Fecha</th><th class="num">Fino entrada (g)</th><th class="num">Producido (g)</th><th class="num">Sobrante (g)</th><th class="num">Merma (g)</th><th class="num">Merma %</th><th class="num">Rendimiento</th><th class="num">⏱ Días vaciado</th></tr></thead>
         <tbody>${rows.map(r=>`<tr>
           <td class="cod">${r.t.codigo}</td><td>${r.t.fecha}</td>
           <td class="num">${fmtNum(r.fino,4)}</td><td class="num">${fmtNum(r.salida,4)}</td><td class="num">${fmtNum(r.sobro,4)}</td>
@@ -2062,6 +2073,7 @@ function generarRptRendimiento() {
           <td class="num"><span style="font-weight:700;color:${rc(r.rend)}">${fmtNum(r.rend,1)}%</span>
             <div class="rend-bar-wrap"><div class="rend-bar-fill" style="width:${Math.min(r.rend,100)}%;background:${rc(r.rend)}"></div></div>
           </td>
+          <td class="num" style="color:var(--blue)">${r.diasVac!=null?r.diasVac+' d':'—'}</td>
         </tr>`).join('')}</tbody>
       </table></div>
     </div>`;
@@ -2069,13 +2081,13 @@ function generarRptRendimiento() {
 }
 function exportarCSVRend() {
   if (!_rptRend.length) return;
-  const cols = ['Código','Fecha','Fino Entrada (g)','Producido (g)','Sobrante (g)','Merma (g)','Merma (%)','Rendimiento (%)'];
+  const cols = ['Código','Fecha','Fino Entrada (g)','Producido (g)','Sobrante (g)','Merma (g)','Merma (%)','Rendimiento (%)','Días en Vaciado'];
   const rows = _rptRend.map(t => {
     const fino  = finoTanda(t);
     const salida = t.completacion.total_salida_g||0;
     const sobro  = t.completacion.sobro_g||0;
     const merma  = Math.max(0, fino-salida-sobro);
-    return [t.codigo, t.fecha, fino.toFixed(4), salida.toFixed(4), sobro.toFixed(4), merma.toFixed(4), (fino>0?merma/fino*100:0).toFixed(2), t.completacion.rendimiento_pct.toFixed(2)];
+    return [t.codigo, t.fecha, fino.toFixed(4), salida.toFixed(4), sobro.toFixed(4), merma.toFixed(4), (fino>0?merma/fino*100:0).toFixed(2), t.completacion.rendimiento_pct.toFixed(2), t.completacion.dias_vaciado??''];
   });
   const desde = document.getElementById('rr-desde').value;
   const hasta  = document.getElementById('rr-hasta').value;
@@ -2695,8 +2707,13 @@ async function completarTanda() {
   const soportes_kilate = soportes_g > 0 ? +((sop10*10 + sop14*14 + sop18*18) / soportes_g).toFixed(2) : 0;
   const sobro_teorico_g = +(finoEntrada - totalFino).toFixed(4);
 
+  const fechaComp = today();
+  const diasVac   = t.fecha_vaciado
+    ? Math.round((new Date(fechaComp) - new Date(t.fecha_vaciado)) / 86400000)
+    : null;
+
   const completacion = {
-    fecha_completacion:  today(),
+    fecha_completacion:  fechaComp,
     produccion,
     total_salida_g:      +totalSalida.toFixed(4),
     total_fino_salida_g: +totalFino.toFixed(4),
@@ -2707,6 +2724,7 @@ async function completarTanda() {
     sobro_teorico_g,
     kilate_sobro:        24,
     rendimiento_pct:     finoEntrada > 0 ? +(totalFino / finoEntrada * 100).toFixed(2) : 0,
+    dias_vaciado:        diasVac,
   };
 
   t.completada   = true;
@@ -2926,6 +2944,16 @@ function openDetalle(codigo) {
         <span class="label">Rendimiento</span>
         <span class="value gold">${fmtNum(c.rendimiento_pct, 1)}%</span>
       </div>
+      ${c.dias_vaciado != null ? `
+      <div class="result-row">
+        <span class="label">⏱ Tiempo en vaciado</span>
+        <span class="value" style="color:var(--blue)">${c.dias_vaciado} día${c.dias_vaciado !== 1 ? 's' : ''}</span>
+      </div>` : ''}
+      ${t.fecha_vaciado && !t.completada ? `
+      <div class="result-row">
+        <span class="label">⏱ En vaciado desde</span>
+        <span class="value" style="color:var(--blue)">${t.fecha_vaciado} · ${Math.round((new Date()-new Date(t.fecha_vaciado))/86400000)} días</span>
+      </div>` : ''}
     `;
     // Sobrante tracking: show where this tanda's leftover gold went
     if (c.sobro_g > 0.001) {
@@ -3065,6 +3093,14 @@ async function cambiarEstado(codigo, nuevoEstado) {
   if (!t) return;
   const anterior = t.estado;
   t.estado = nuevoEstado;
+  // Registrar fecha de inicio de vaciado la primera vez
+  if (nuevoEstado === 'en_vaciado' && !t.fecha_vaciado) {
+    t.fecha_vaciado = today();
+  }
+  // Si vuelve a pendiente, limpiar fecha de vaciado
+  if (nuevoEstado === 'pendiente') {
+    t.fecha_vaciado = null;
+  }
   try {
     await syncActualizar(t);
     const labels = { pendiente:'Pendiente', en_vaciado:'En Vaciado', completada:'Completada', en_tienda:'En Tienda' };
