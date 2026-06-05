@@ -793,9 +793,10 @@
         <div class="grid-2" style="margin-top:14px">
           <div class="field">
             <label>Material</label>
-            <select id="imp-material" onchange="calcImpKaratesAll()">
+            <select id="imp-material" onchange="onImpMaterialChange()">
               <option value="resina">Resina</option>
               <option value="cera">Cera</option>
+              <option value="ambos">Resina + Cera (mixto)</option>
             </select>
           </div>
         </div>
@@ -803,6 +804,12 @@
         <hr style="border:none;border-top:1px solid var(--border);margin:20px 0">
         <!-- Distribución por kilataje -->
         <div class="section-label">Distribución por Kilataje</div>
+
+        <!-- Label de sección — solo visible en modo ambos -->
+        <div id="imp-mat1-label" style="display:none;margin-bottom:12px">
+          <span style="background:rgba(106,180,240,.1);border:1px solid rgba(106,180,240,.25);color:var(--blue);font-size:12px;font-weight:600;padding:4px 12px;border-radius:20px">🔷 Resina</span>
+        </div>
+
         <div class="karat-grid">
           <div class="karat-card">
             <h4>🔸 Oro 10k</h4>
@@ -841,6 +848,53 @@
             <div id="imp-18k-estimate" style="margin-top:8px"></div>
           </div>
         </div>
+
+        <!-- Sección CERA — solo visible cuando material = ambos -->
+        <div id="imp-cera-section" style="display:none">
+          <div style="margin:20px 0 12px;display:flex;align-items:center;gap:10px">
+            <span style="background:rgba(240,200,74,.1);border:1px solid rgba(240,200,74,.25);color:var(--yellow);font-size:12px;font-weight:600;padding:4px 12px;border-radius:20px">🕯️ Cera</span>
+            <span style="font-size:12px;color:var(--muted)">Ingresa los datos de las piezas en cera por separado</span>
+          </div>
+          <div class="karat-grid">
+            <div class="karat-card" style="border-color:rgba(240,200,74,.2)">
+              <h4>🔸 Oro 10k</h4>
+              <div class="field"><label>Piezas impresas</label>
+                <input type="number" id="imp-c-10k-total" placeholder="0" min="0" step="1" oninput="calcImpKaratCera('10')" /></div>
+              <div class="field mt-16"><label>✅ Piezas buenas</label>
+                <input type="number" id="imp-c-10k-buenas" placeholder="0" min="0" step="1" oninput="calcImpKaratCera('10')" /></div>
+              <div class="field mt-16"><label>❌ Piezas rotas</label>
+                <input type="number" id="imp-c-10k-rotas" placeholder="0" min="0" step="1" oninput="calcImpKaratCera('10')" /></div>
+              <div class="field mt-16"><label>Peso modelo (g)</label>
+                <input type="text" inputmode="decimal" id="imp-c-10k-peso" placeholder="0.00" oninput="calcImpKaratCera('10')" onblur="evalGramInput(this)" /></div>
+              <div id="imp-c-10k-estimate" style="margin-top:8px"></div>
+            </div>
+            <div class="karat-card" style="border-color:rgba(240,200,74,.2)">
+              <h4>🔶 Oro 14k</h4>
+              <div class="field"><label>Piezas impresas</label>
+                <input type="number" id="imp-c-14k-total" placeholder="0" min="0" step="1" oninput="calcImpKaratCera('14')" /></div>
+              <div class="field mt-16"><label>✅ Piezas buenas</label>
+                <input type="number" id="imp-c-14k-buenas" placeholder="0" min="0" step="1" oninput="calcImpKaratCera('14')" /></div>
+              <div class="field mt-16"><label>❌ Piezas rotas</label>
+                <input type="number" id="imp-c-14k-rotas" placeholder="0" min="0" step="1" oninput="calcImpKaratCera('14')" /></div>
+              <div class="field mt-16"><label>Peso modelo (g)</label>
+                <input type="text" inputmode="decimal" id="imp-c-14k-peso" placeholder="0.00" oninput="calcImpKaratCera('14')" onblur="evalGramInput(this)" /></div>
+              <div id="imp-c-14k-estimate" style="margin-top:8px"></div>
+            </div>
+            <div class="karat-card" style="border-color:rgba(240,200,74,.2)">
+              <h4>🟡 Oro 18k</h4>
+              <div class="field"><label>Piezas impresas</label>
+                <input type="number" id="imp-c-18k-total" placeholder="0" min="0" step="1" oninput="calcImpKaratCera('18')" /></div>
+              <div class="field mt-16"><label>✅ Piezas buenas</label>
+                <input type="number" id="imp-c-18k-buenas" placeholder="0" min="0" step="1" oninput="calcImpKaratCera('18')" /></div>
+              <div class="field mt-16"><label>❌ Piezas rotas</label>
+                <input type="number" id="imp-c-18k-rotas" placeholder="0" min="0" step="1" oninput="calcImpKaratCera('18')" /></div>
+              <div class="field mt-16"><label>Peso modelo (g)</label>
+                <input type="text" inputmode="decimal" id="imp-c-18k-peso" placeholder="0.00" oninput="calcImpKaratCera('18')" onblur="evalGramInput(this)" /></div>
+              <div id="imp-c-18k-estimate" style="margin-top:8px"></div>
+            </div>
+          </div>
+        </div>
+
         <!-- Totales automáticos -->
         <div id="imp-karat-totales" style="display:none;margin-top:12px"></div>
 
@@ -3258,50 +3312,93 @@ async function syncActualizar(tanda) {
 // Stub para compatibilidad con código anterior
 function calcImpGoldEstimate() {}
 
-// Actualiza el estimado de oro para una tarjeta de kilataje individual
-function calcImpKarat(k) {
-  const mat  = document.getElementById('imp-material')?.value || 'resina';
-  const peso = parseFloat(document.getElementById(`imp-${k}k-peso`)?.value) || 0;
-  const el   = document.getElementById(`imp-${k}k-estimate`);
-  if (el) {
-    if (peso > 0) {
-      const { mult, n, isLearned } = getMultInfo(mat, k);
-      const est = +(peso * mult).toFixed(4);
-      const defMult = MULT_DEFAULT[k];
-      const diffPct = ((mult - defMult) / defMult * 100);
-      const badge = isLearned
-        ? `<span style="color:var(--green);font-size:10px"> ✓ ${n} real${n>1?'es':''} (${diffPct>=0?'+':''}${diffPct.toFixed(1)}%)</span>`
-        : `<span style="color:var(--muted);font-size:10px"> base</span>`;
-      el.innerHTML = `<div style="background:rgba(196,168,130,.08);border:1px solid rgba(196,168,130,.15);border-radius:6px;padding:7px 10px;font-size:12px;display:flex;justify-content:space-between;align-items:center">
-        <span style="color:var(--muted)">~Oro ${k}k${badge}</span>
-        <span style="color:var(--gold-lt);font-weight:700">${fmtNum(est,2)} g</span>
-      </div>`;
-    } else {
-      el.innerHTML = '';
-    }
+// Muestra/oculta la sección de cera según el material seleccionado
+function onImpMaterialChange() {
+  const mat     = document.getElementById('imp-material')?.value || 'resina';
+  const isAmbos = mat === 'ambos';
+  document.getElementById('imp-cera-section').style.display  = isAmbos ? 'block' : 'none';
+  document.getElementById('imp-mat1-label').style.display    = isAmbos ? 'block' : 'none';
+  calcImpKaratesAll();
+}
+
+// Helper: renderiza el badge de estimado de oro en una tarjeta
+function _renderEstBadge(elId, matForCalc, k, peso) {
+  const el = document.getElementById(elId);
+  if (!el) return;
+  if (peso > 0) {
+    const { mult, n, isLearned } = getMultInfo(matForCalc, k);
+    const est     = +(peso * mult).toFixed(4);
+    const defMult = MULT_DEFAULT[k];
+    const diffPct = ((mult - defMult) / defMult * 100);
+    const badge   = isLearned
+      ? `<span style="color:var(--green);font-size:10px"> ✓ ${n} real${n>1?'es':''} (${diffPct>=0?'+':''}${diffPct.toFixed(1)}%)</span>`
+      : `<span style="color:var(--muted);font-size:10px"> base</span>`;
+    el.innerHTML = `<div style="background:rgba(196,168,130,.08);border:1px solid rgba(196,168,130,.15);border-radius:6px;padding:7px 10px;font-size:12px;display:flex;justify-content:space-between;align-items:center">
+      <span style="color:var(--muted)">~Oro ${k}k${badge}</span>
+      <span style="color:var(--gold-lt);font-weight:700">${fmtNum(est,2)} g</span>
+    </div>`;
+  } else {
+    el.innerHTML = '';
   }
+}
+
+// Actualiza el estimado de oro para una tarjeta de kilataje individual (resina o single)
+function calcImpKarat(k) {
+  const mat        = document.getElementById('imp-material')?.value || 'resina';
+  const matForCalc = mat === 'ambos' ? 'resina' : mat;
+  const peso       = parseFloat(document.getElementById(`imp-${k}k-peso`)?.value) || 0;
+  _renderEstBadge(`imp-${k}k-estimate`, matForCalc, k, peso);
+  calcImpKaratesAll();
+}
+
+// Actualiza el estimado de una tarjeta del grupo CERA
+function calcImpKaratCera(k) {
+  const peso = parseFloat(document.getElementById(`imp-c-${k}k-peso`)?.value) || 0;
+  _renderEstBadge(`imp-c-${k}k-estimate`, 'cera', k, peso);
   calcImpKaratesAll();
 }
 
 // Recalcula totales y previews de costos desde todos los kilatajes
 function calcImpKaratesAll() {
-  const mat   = document.getElementById('imp-material')?.value || 'resina';
-  const costo = parseFloat(document.getElementById('imp-costo')?.value) || 0;
+  const mat     = document.getElementById('imp-material')?.value || 'resina';
+  const isAmbos = mat === 'ambos';
+  const costo   = parseFloat(document.getElementById('imp-costo')?.value) || 0;
 
   let total = 0, buenas = 0, rotas = 0, totalEst = 0;
   let hayBuenas = false, hayRotas = false;
 
   ['10','14','18'].forEach(k => {
+    // Grupo principal (resina o material único)
     const t = parseInt(document.getElementById(`imp-${k}k-total`)?.value)  || 0;
     const b = document.getElementById(`imp-${k}k-buenas`)?.value;
     const r = document.getElementById(`imp-${k}k-rotas`)?.value;
     const p = parseFloat(document.getElementById(`imp-${k}k-peso`)?.value) || 0;
-    total += t;
+    const matCalc = isAmbos ? 'resina' : mat;
+
+    let tt = t;
     const bv = (b !== '' && b != null && !isNaN(parseInt(b))) ? parseInt(b) : null;
     const rv = (r !== '' && r != null && !isNaN(parseInt(r))) ? parseInt(r) : null;
-    if (bv !== null) { buenas += bv; hayBuenas = true; }
-    if (rv !== null) { rotas  += rv; hayRotas  = true; }
-    if (p > 0) { const { mult } = getMultInfo(mat, k); totalEst += p * mult; }
+    let bSum = bv ?? 0, rSum = rv ?? 0;
+    let haybGroup = bv !== null, hayrGroup = rv !== null;
+    if (p > 0) totalEst += p * getMultInfo(matCalc, k).mult;
+
+    // Grupo cera (solo cuando ambos)
+    if (isAmbos) {
+      const tc = parseInt(document.getElementById(`imp-c-${k}k-total`)?.value)  || 0;
+      const bc = document.getElementById(`imp-c-${k}k-buenas`)?.value;
+      const rc = document.getElementById(`imp-c-${k}k-rotas`)?.value;
+      const pc = parseFloat(document.getElementById(`imp-c-${k}k-peso`)?.value) || 0;
+      const bcv = (bc !== '' && bc != null && !isNaN(parseInt(bc))) ? parseInt(bc) : null;
+      const rcv = (rc !== '' && rc != null && !isNaN(parseInt(rc))) ? parseInt(rc) : null;
+      tt += tc;
+      if (bcv !== null) { bSum += bcv; haybGroup = true; }
+      if (rcv !== null) { rSum += rcv; hayrGroup = true; }
+      if (pc > 0) totalEst += pc * getMultInfo('cera', k).mult;
+    }
+
+    total += tt;
+    if (haybGroup) { buenas += bSum; hayBuenas = true; }
+    if (hayrGroup) { rotas  += rSum; hayRotas  = true; }
   });
 
   // Actualizar campos ocultos para compatibilidad
@@ -3376,6 +3473,7 @@ function guardarImpresion() {
   if (!costo || costo <= 0) { errEl.textContent = 'Ingresa el costo total.'; errEl.style.display='block'; return; }
 
   // Leer datos por kilataje
+  const isAmbos = material === 'ambos';
   const kilates = {};
   let totalPiezas = 0, totalBuenas = 0, totalRotas = 0;
   let hayBuenas = false, hayRotas = false;
@@ -3383,29 +3481,70 @@ function guardarImpresion() {
 
   ['10','14','18'].forEach(k => {
     if (validationError) return;
-    const t = parseInt(document.getElementById(`imp-${k}k-total`)?.value)  || 0;
-    const b = document.getElementById(`imp-${k}k-buenas`)?.value;
-    const r = document.getElementById(`imp-${k}k-rotas`)?.value;
-    const p = parseFloat(document.getElementById(`imp-${k}k-peso`)?.value) || 0;
+    const t  = parseInt(document.getElementById(`imp-${k}k-total`)?.value)  || 0;
+    const b  = document.getElementById(`imp-${k}k-buenas`)?.value;
+    const r  = document.getElementById(`imp-${k}k-rotas`)?.value;
+    const p  = parseFloat(document.getElementById(`imp-${k}k-peso`)?.value) || 0;
+    const bv = (b !== '' && b != null && !isNaN(parseInt(b))) ? parseInt(b) : null;
+    const rv = (r !== '' && r != null && !isNaN(parseInt(r))) ? parseInt(r) : null;
 
-    if (t > 0 || p > 0) {
-      const bv = (b !== '' && b != null && !isNaN(parseInt(b))) ? parseInt(b) : null;
-      const rv = (r !== '' && r != null && !isNaN(parseInt(r))) ? parseInt(r) : null;
+    let totalK = t, buenasK = bv, rotasK = rv, pesoK = p;
+    let resinaDat = null, ceraDat = null;
+
+    if (isAmbos) {
+      // Grupo cera
+      const tc  = parseInt(document.getElementById(`imp-c-${k}k-total`)?.value)  || 0;
+      const bc  = document.getElementById(`imp-c-${k}k-buenas`)?.value;
+      const rc  = document.getElementById(`imp-c-${k}k-rotas`)?.value;
+      const pc  = parseFloat(document.getElementById(`imp-c-${k}k-peso`)?.value) || 0;
+      const bcv = (bc !== '' && bc != null && !isNaN(parseInt(bc))) ? parseInt(bc) : null;
+      const rcv = (rc !== '' && rc != null && !isNaN(parseInt(rc))) ? parseInt(rc) : null;
+
+      // Validar cada grupo por separado
+      if (bv !== null && rv !== null && (bv + rv) > t) {
+        validationError = `Resina ${k}k: buenas + rotas supera el total (${t}).`;
+        return;
+      }
+      if (bcv !== null && rcv !== null && (bcv + rcv) > tc) {
+        validationError = `Cera ${k}k: buenas + rotas supera el total (${tc}).`;
+        return;
+      }
+
+      const { mult: mR } = getMultInfo('resina', k);
+      const { mult: mC } = getMultInfo('cera', k);
+      resinaDat = { total: t,  buenas: bv,  rotas: rv,  peso_resina_g: p||null,  estimado_g: p>0?+(p*mR).toFixed(4):null };
+      ceraDat   = { total: tc, buenas: bcv, rotas: rcv, peso_cera_g:   pc||null, estimado_g: pc>0?+(pc*mC).toFixed(4):null };
+
+      // Combinados para los campos de nivel superior
+      totalK  = t + tc;
+      buenasK = (bv !== null || bcv !== null) ? (bv ?? 0) + (bcv ?? 0) : null;
+      rotasK  = (rv !== null || rcv !== null) ? (rv ?? 0) + (rcv ?? 0) : null;
+      pesoK   = p; // usamos el peso de resina como "primario"
+    } else {
       if (bv !== null && rv !== null && (bv + rv) > t) {
         validationError = `En ${k}k: la suma de buenas + rotas supera el total (${t}).`;
         return;
       }
-      const { mult } = getMultInfo(material, k);
-      kilates[k] = {
-        total:         t,
-        buenas:        bv,
-        rotas:         rv,
-        peso_resina_g: p || null,
-        estimado_g:    p > 0 ? +(p * mult).toFixed(4) : null,
+    }
+
+    if (totalK > 0 || pesoK > 0 || (isAmbos && ceraDat?.total > 0)) {
+      const matCalc = isAmbos ? 'resina' : material;
+      const { mult } = getMultInfo(matCalc, k);
+      const entry = {
+        total:         totalK,
+        buenas:        buenasK,
+        rotas:         rotasK,
+        peso_resina_g: pesoK || null,
+        estimado_g:    pesoK > 0 ? +(pesoK * mult).toFixed(4) : null,
       };
-      totalPiezas += t;
-      if (bv !== null) { hayBuenas = true; totalBuenas += bv; }
-      if (rv !== null) { hayRotas  = true; totalRotas  += rv; }
+      if (isAmbos) {
+        entry.resina = resinaDat;
+        entry.cera   = ceraDat;
+      }
+      kilates[k] = entry;
+      totalPiezas += totalK;
+      if (buenasK !== null) { hayBuenas = true; totalBuenas += buenasK; }
+      if (rotasK  !== null) { hayRotas  = true; totalRotas  += rotasK;  }
     }
   });
 
@@ -3488,15 +3627,22 @@ function limpiarImpresion() {
   if (matEl) matEl.value = 'resina';
   document.getElementById('imp-fecha').value = today();
 
-  // Limpiar campos por kilataje
+  // Limpiar campos por kilataje (resina/single y cera)
   ['10','14','18'].forEach(k => {
     ['total','buenas','rotas','peso'].forEach(f => {
       const el = document.getElementById(`imp-${k}k-${f}`);
       if (el) el.value = '';
+      const elC = document.getElementById(`imp-c-${k}k-${f}`);
+      if (elC) elC.value = '';
     });
     const est = document.getElementById(`imp-${k}k-estimate`);
     if (est) est.innerHTML = '';
+    const estC = document.getElementById(`imp-c-${k}k-estimate`);
+    if (estC) estC.innerHTML = '';
   });
+  // Ocultar sección cera y resetear select
+  document.getElementById('imp-cera-section').style.display = 'none';
+  document.getElementById('imp-mat1-label').style.display   = 'none';
 
   const totEl = document.getElementById('imp-karat-totales');
   if (totEl) totEl.style.display = 'none';
@@ -3530,19 +3676,31 @@ function editarImpresion(id) {
   const matEl = document.getElementById('imp-material');
   if (matEl) matEl.value = imp.material || 'resina';
 
+  const isAmbos = imp.material === 'ambos';
+  document.getElementById('imp-cera-section').style.display = isAmbos ? 'block' : 'none';
+  document.getElementById('imp-mat1-label').style.display   = isAmbos ? 'block' : 'none';
+
   // Limpiar campos por kilataje y rellenar
   ['10','14','18'].forEach(k => {
-    const kd = imp.kilates?.[k] || {};
-    const total   = document.getElementById(`imp-${k}k-total`);
-    const buenas  = document.getElementById(`imp-${k}k-buenas`);
-    const rotas   = document.getElementById(`imp-${k}k-rotas`);
-    const peso    = document.getElementById(`imp-${k}k-peso`);
-    const est     = document.getElementById(`imp-${k}k-estimate`);
-    if (total)  total.value  = kd.total  != null && kd.total  > 0 ? kd.total  : '';
-    if (buenas) buenas.value = kd.buenas != null                  ? kd.buenas : '';
-    if (rotas)  rotas.value  = kd.rotas  != null                  ? kd.rotas  : '';
-    if (peso)   peso.value   = kd.peso_resina_g != null           ? kd.peso_resina_g : '';
-    if (est)    est.innerHTML = '';
+    const kd  = imp.kilates?.[k] || {};
+    // Cuando es ambos, los campos principales muestran solo resina
+    const kdR = isAmbos ? (kd.resina || {}) : kd;
+    const kdC = isAmbos ? (kd.cera   || {}) : null;
+
+    const setVal = (id, val) => { const el = document.getElementById(id); if (el) el.value = val != null ? val : ''; };
+    setVal(`imp-${k}k-total`,  kdR.total  > 0 ? kdR.total  : '');
+    setVal(`imp-${k}k-buenas`, kdR.buenas != null ? kdR.buenas : '');
+    setVal(`imp-${k}k-rotas`,  kdR.rotas  != null ? kdR.rotas  : '');
+    setVal(`imp-${k}k-peso`,   kdR.peso_resina_g != null ? kdR.peso_resina_g : '');
+    const est = document.getElementById(`imp-${k}k-estimate`); if (est) est.innerHTML = '';
+
+    if (isAmbos && kdC) {
+      setVal(`imp-c-${k}k-total`,  kdC.total  > 0 ? kdC.total  : '');
+      setVal(`imp-c-${k}k-buenas`, kdC.buenas != null ? kdC.buenas : '');
+      setVal(`imp-c-${k}k-rotas`,  kdC.rotas  != null ? kdC.rotas  : '');
+      setVal(`imp-c-${k}k-peso`,   (kdC.peso_cera_g ?? kdC.peso_resina_g) != null ? (kdC.peso_cera_g ?? kdC.peso_resina_g) : '');
+      const estC = document.getElementById(`imp-c-${k}k-estimate`); if (estC) estC.innerHTML = '';
+    }
   });
 
   // Recalcular previews
