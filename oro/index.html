@@ -901,10 +901,38 @@
         <hr style="border:none;border-top:1px solid var(--border);margin:20px 0">
         <!-- Costos -->
         <div class="section-label">Costos</div>
-        <div class="grid-2">
+
+        <!-- Costo único (resina o cera) -->
+        <div id="imp-costo-single" class="grid-2">
           <div class="field">
             <label>Costo total de impresión ($)</label>
             <input type="text" inputmode="decimal" id="imp-costo" placeholder="0.00" oninput="calcImpKaratesAll()" onblur="evalGramInput(this)" />
+          </div>
+        </div>
+
+        <!-- Costos separados (solo modo ambos) -->
+        <div id="imp-costo-ambos" style="display:none">
+          <div class="grid-2">
+            <div class="field">
+              <label style="display:flex;align-items:center;gap:6px">
+                <span style="background:rgba(106,180,240,.1);border:1px solid rgba(106,180,240,.25);color:var(--blue);font-size:11px;font-weight:600;padding:2px 8px;border-radius:10px">🔷 Resina</span>
+                Costo impresión ($)
+              </label>
+              <input type="text" inputmode="decimal" id="imp-costo-resina" placeholder="0.00"
+                oninput="calcImpCostoAmbos()" onblur="evalGramInput(this)" />
+            </div>
+            <div class="field">
+              <label style="display:flex;align-items:center;gap:6px">
+                <span style="background:rgba(240,200,74,.1);border:1px solid rgba(240,200,74,.25);color:var(--yellow);font-size:11px;font-weight:600;padding:2px 8px;border-radius:10px">🕯️ Cera</span>
+                Costo impresión ($)
+              </label>
+              <input type="text" inputmode="decimal" id="imp-costo-cera" placeholder="0.00"
+                oninput="calcImpCostoAmbos()" onblur="evalGramInput(this)" />
+            </div>
+          </div>
+          <div id="imp-costo-total-preview" style="display:none;margin-top:10px;background:rgba(196,168,130,.06);border:1px solid rgba(196,168,130,.15);border-radius:8px;padding:10px 16px;font-size:13px;display:flex;align-items:center;gap:16px">
+            <span style="color:var(--muted)">Total combinado:</span>
+            <span id="imp-costo-total-val" style="font-weight:700;color:var(--gold-lt);font-size:16px">$0.00</span>
           </div>
         </div>
         <!-- Preview costos -->
@@ -3312,12 +3340,38 @@ async function syncActualizar(tanda) {
 // Stub para compatibilidad con código anterior
 function calcImpGoldEstimate() {}
 
-// Muestra/oculta la sección de cera según el material seleccionado
+// Muestra/oculta la sección de cera y costos según el material seleccionado
 function onImpMaterialChange() {
   const mat     = document.getElementById('imp-material')?.value || 'resina';
   const isAmbos = mat === 'ambos';
-  document.getElementById('imp-cera-section').style.display  = isAmbos ? 'block' : 'none';
-  document.getElementById('imp-mat1-label').style.display    = isAmbos ? 'block' : 'none';
+  document.getElementById('imp-cera-section').style.display   = isAmbos ? 'block' : 'none';
+  document.getElementById('imp-mat1-label').style.display     = isAmbos ? 'block' : 'none';
+  document.getElementById('imp-costo-single').style.display   = isAmbos ? 'none'  : 'grid';
+  document.getElementById('imp-costo-ambos').style.display    = isAmbos ? 'block' : 'none';
+  if (!isAmbos) {
+    // Limpiar campos de costo separados al cambiar de modo
+    const cr = document.getElementById('imp-costo-resina'); if (cr) cr.value = '';
+    const cc = document.getElementById('imp-costo-cera');   if (cc) cc.value = '';
+    const tp = document.getElementById('imp-costo-total-preview'); if (tp) tp.style.display = 'none';
+  }
+  calcImpKaratesAll();
+}
+
+// Suma los costos resina + cera → actualiza imp-costo (campo interno) y el preview
+function calcImpCostoAmbos() {
+  const cr = parseFloat(document.getElementById('imp-costo-resina')?.value) || 0;
+  const cc = parseFloat(document.getElementById('imp-costo-cera')?.value)   || 0;
+  const total = cr + cc;
+  // Actualizar campo oculto que usa el resto del código
+  const costoEl = document.getElementById('imp-costo');
+  if (costoEl) costoEl.value = total > 0 ? total : '';
+  // Preview del total
+  const prevDiv = document.getElementById('imp-costo-total-preview');
+  const prevVal = document.getElementById('imp-costo-total-val');
+  if (prevDiv && prevVal) {
+    prevDiv.style.display = total > 0 ? 'flex' : 'none';
+    prevVal.textContent   = fmtMoney(total);
+  }
   calcImpKaratesAll();
 }
 
@@ -3462,15 +3516,27 @@ function guardarImpresion() {
   const errEl  = document.getElementById('imp-error');
   errEl.style.display = 'none';
 
-  const fecha    = document.getElementById('imp-fecha').value;
-  const nombre   = document.getElementById('imp-nombre').value.trim();
-  const costo    = parseFloat(document.getElementById('imp-costo').value);
-  const material = document.getElementById('imp-material')?.value || 'resina';
-  const notas    = document.getElementById('imp-notas')?.value.trim() || '';
+  const fecha       = document.getElementById('imp-fecha').value;
+  const nombre      = document.getElementById('imp-nombre').value.trim();
+  const material    = document.getElementById('imp-material')?.value || 'resina';
+  const notas       = document.getElementById('imp-notas')?.value.trim() || '';
+  const isAmbosForm = material === 'ambos';
+
+  // Leer costos según modo
+  const costoResina = isAmbosForm ? (parseFloat(document.getElementById('imp-costo-resina')?.value) || 0) : 0;
+  const costoCera   = isAmbosForm ? (parseFloat(document.getElementById('imp-costo-cera')?.value)   || 0) : 0;
+  const costo       = isAmbosForm
+    ? costoResina + costoCera
+    : parseFloat(document.getElementById('imp-costo').value);
 
   if (!fecha)               { errEl.textContent = 'Agrega la fecha.'; errEl.style.display='block'; return; }
   if (!nombre)              { errEl.textContent = 'Agrega un nombre o descripción.'; errEl.style.display='block'; return; }
-  if (!costo || costo <= 0) { errEl.textContent = 'Ingresa el costo total.'; errEl.style.display='block'; return; }
+  if (!costo || costo <= 0) {
+    errEl.textContent = isAmbosForm
+      ? 'Ingresa el costo de al menos uno de los materiales (Resina o Cera).'
+      : 'Ingresa el costo total.';
+    errEl.style.display = 'block'; return;
+  }
 
   // Leer datos por kilataje
   const isAmbos = material === 'ambos';
@@ -3583,6 +3649,8 @@ function guardarImpresion() {
     estimado_g:            kilates[kilateObj]?.estimado_g    || null,
     total_piezas:          totalPiezas,
     costo_total:           costo,
+    // Costos por material (solo en modo ambos)
+    ...(isAmbosForm && { costo_resina: costoResina || null, costo_cera: costoCera || null }),
     costo_por_pieza:       +(costo / totalPiezas).toFixed(4),
     buenas:                buen,
     rotas:                 rot,
@@ -3640,9 +3708,15 @@ function limpiarImpresion() {
     const estC = document.getElementById(`imp-c-${k}k-estimate`);
     if (estC) estC.innerHTML = '';
   });
-  // Ocultar sección cera y resetear select
-  document.getElementById('imp-cera-section').style.display = 'none';
-  document.getElementById('imp-mat1-label').style.display   = 'none';
+  // Limpiar costos separados
+  const cr = document.getElementById('imp-costo-resina'); if (cr) cr.value = '';
+  const cc = document.getElementById('imp-costo-cera');   if (cc) cc.value = '';
+  const tp = document.getElementById('imp-costo-total-preview'); if (tp) tp.style.display = 'none';
+  // Restaurar secciones al estado por defecto
+  document.getElementById('imp-cera-section').style.display  = 'none';
+  document.getElementById('imp-mat1-label').style.display    = 'none';
+  document.getElementById('imp-costo-single').style.display  = 'grid';
+  document.getElementById('imp-costo-ambos').style.display   = 'none';
 
   const totEl = document.getElementById('imp-karat-totales');
   if (totEl) totEl.style.display = 'none';
@@ -3677,8 +3751,19 @@ function editarImpresion(id) {
   if (matEl) matEl.value = imp.material || 'resina';
 
   const isAmbos = imp.material === 'ambos';
-  document.getElementById('imp-cera-section').style.display = isAmbos ? 'block' : 'none';
-  document.getElementById('imp-mat1-label').style.display   = isAmbos ? 'block' : 'none';
+  document.getElementById('imp-cera-section').style.display  = isAmbos ? 'block' : 'none';
+  document.getElementById('imp-mat1-label').style.display    = isAmbos ? 'block' : 'none';
+  document.getElementById('imp-costo-single').style.display  = isAmbos ? 'none'  : 'grid';
+  document.getElementById('imp-costo-ambos').style.display   = isAmbos ? 'block' : 'none';
+
+  if (isAmbos) {
+    const crEl = document.getElementById('imp-costo-resina');
+    const ccEl = document.getElementById('imp-costo-cera');
+    if (crEl) crEl.value = imp.costo_resina != null ? imp.costo_resina : '';
+    if (ccEl) ccEl.value = imp.costo_cera   != null ? imp.costo_cera   : '';
+    // Actualizar preview de total
+    calcImpCostoAmbos();
+  }
 
   // Limpiar campos por kilataje y rellenar
   ['10','14','18'].forEach(k => {
@@ -3807,7 +3892,7 @@ function renderImpresiones() {
           <span class="imp-name">${imp.nombre}</span>
           ${lt ? `<span class="imp-tanda-badge">🔗 ${lt.codigo}</span>` : ''}
         </div>
-        <span class="imp-sub">${imp.fecha}${matLabel ? ' · ' + matLabel : ''} · ${imp.total_piezas} piezas · ${fmtMoney(imp.costo_total)}</span>
+        <span class="imp-sub">${imp.fecha}${matLabel ? ' · ' + matLabel : ''} · ${imp.total_piezas} piezas · ${fmtMoney(imp.costo_total)}${imp.costo_resina||imp.costo_cera?` <span style="color:var(--muted)">(🔷${fmtMoney(imp.costo_resina??0)} + 🕯️${fmtMoney(imp.costo_cera??0)})</span>`:''}</span>
         ${imp.kilates
           ? `<span class="imp-sub">${Object.entries(imp.kilates).filter(([k,kd])=>kd.total>0).map(([k,kd])=>`${k}k: ${kd.total} pzs${kd.buenas!=null?' (✅'+kd.buenas+')':''}`).join(' · ')}</span>`
           : (imp.buenas != null
