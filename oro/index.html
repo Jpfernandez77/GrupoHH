@@ -378,6 +378,65 @@
   @media(max-width:600px) { .stats-5 { grid-template-columns:repeat(2,1fr); } }
   .rend-bar-wrap { height:5px; background:rgba(255,255,255,.08); border-radius:3px; margin-top:5px; }
   .rend-bar-fill { height:100%; border-radius:3px; }
+
+  /* ── foto upload ── */
+  .foto-zone {
+    border:2px dashed var(--border); border-radius:8px; padding:18px 20px;
+    text-align:center; cursor:pointer; transition:all .2s; margin-top:4px;
+    background:rgba(255,255,255,.02);
+  }
+  .foto-zone:hover, .foto-zone.dragover { border-color:var(--gold-dk); background:rgba(196,168,130,.05); }
+  .foto-zone input[type=file] { display:none; }
+  .foto-zone .fz-icon { font-size:28px; margin-bottom:6px; }
+  .foto-zone .fz-txt  { font-size:13px; color:var(--muted); }
+  .foto-zone .fz-hint { font-size:11px; color:var(--muted); margin-top:3px; opacity:.7; }
+
+  .foto-thumb-grid { display:flex; flex-wrap:wrap; gap:10px; margin-top:12px; }
+  .foto-thumb-wrap {
+    position:relative; width:80px; height:80px; border-radius:6px;
+    overflow:visible; flex-shrink:0;
+  }
+  .foto-thumb-wrap img {
+    width:80px; height:80px; object-fit:cover; border-radius:6px;
+    border:1px solid var(--border); cursor:pointer; transition:opacity .15s;
+    display:block;
+  }
+  .foto-thumb-wrap img:hover { opacity:.85; }
+  .foto-thumb-del {
+    position:absolute; top:-6px; right:-6px;
+    width:18px; height:18px; border-radius:50%;
+    background:var(--red); color:#fff; border:none; cursor:pointer;
+    font-size:10px; font-weight:700; line-height:18px; text-align:center;
+    display:flex; align-items:center; justify-content:center;
+    box-shadow:0 1px 4px rgba(0,0,0,.5); z-index:2;
+  }
+  .foto-count { font-size:11px; color:var(--muted); margin-top:6px; }
+
+  /* ── foto lightbox ── */
+  #foto-lightbox {
+    display:none; position:fixed; inset:0; background:rgba(0,0,0,.9);
+    z-index:500; align-items:center; justify-content:center; flex-direction:column;
+  }
+  #foto-lightbox.open { display:flex; }
+  #foto-lightbox img  { max-width:90vw; max-height:80vh; border-radius:8px; object-fit:contain; }
+  #foto-lightbox .lb-close {
+    position:absolute; top:16px; right:20px;
+    color:#fff; background:rgba(255,255,255,.15); border:none; cursor:pointer;
+    font-size:24px; border-radius:50%; width:36px; height:36px; line-height:36px;
+    text-align:center;
+  }
+  #foto-lightbox .lb-nav {
+    display:flex; gap:16px; margin-top:14px;
+  }
+  #foto-lightbox .lb-btn {
+    background:rgba(255,255,255,.15); border:none; color:#fff; cursor:pointer;
+    padding:6px 18px; border-radius:6px; font-size:14px;
+  }
+  #foto-lightbox .lb-btn:disabled { opacity:.3; cursor:default; }
+  #foto-lightbox .lb-counter { color:rgba(255,255,255,.6); font-size:13px; align-self:center; }
+
+  /* badge foto en listados */
+  .foto-badge { font-size:11px; color:var(--muted); margin-left:6px; }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
 </head>
@@ -752,6 +811,21 @@
 
         <div id="c-preview" class="result-box" style="display:none"></div>
 
+        <!-- Fotos del vaciado -->
+        <div class="card" style="margin-top:0">
+          <div class="section-label">📷 Fotos del Vaciado</div>
+          <div class="foto-zone" id="vac-foto-zone" onclick="document.getElementById('vac-foto-input').click()"
+               ondragover="fotoDragOver(event,'vac-foto-zone')" ondragleave="fotoDragLeave('vac-foto-zone')"
+               ondrop="fotoDrop(event,'vac')">
+            <input type="file" id="vac-foto-input" accept="image/*" multiple onchange="fotoFilePicked(event,'vac')">
+            <div class="fz-icon">📸</div>
+            <div class="fz-txt">Haz clic o arrastra imágenes aquí</div>
+            <div class="fz-hint">JPG, PNG, WEBP · Máx 5 fotos · Se comprimen automáticamente</div>
+          </div>
+          <div class="foto-thumb-grid" id="vac-foto-thumbs"></div>
+          <div class="foto-count" id="vac-foto-count"></div>
+        </div>
+
         <div class="actions">
           <button class="btn btn-gold" onclick="completarTanda()">Guardar Producción</button>
         </div>
@@ -970,6 +1044,20 @@
           <input type="text" id="imp-notas" placeholder="Observaciones opcionales…" />
         </div>
 
+        <!-- Fotos -->
+        <hr style="border:none;border-top:1px solid var(--border);margin:20px 0">
+        <div class="section-label">📷 Fotos de la Impresión</div>
+        <div class="foto-zone" id="imp-foto-zone" onclick="document.getElementById('imp-foto-input').click()"
+             ondragover="fotoDragOver(event,'imp-foto-zone')" ondragleave="fotoDragLeave('imp-foto-zone')"
+             ondrop="fotoDrop(event,'imp')">
+          <input type="file" id="imp-foto-input" accept="image/*" multiple onchange="fotoFilePicked(event,'imp')">
+          <div class="fz-icon">📷</div>
+          <div class="fz-txt">Haz clic o arrastra imágenes aquí</div>
+          <div class="fz-hint">JPG, PNG, WEBP · Máx 5 fotos · Se comprimen automáticamente</div>
+        </div>
+        <div class="foto-thumb-grid" id="imp-foto-thumbs"></div>
+        <div class="foto-count" id="imp-foto-count"></div>
+
         <div id="imp-error" style="display:none;color:var(--red);font-size:13px;margin-top:12px"></div>
         <div class="actions">
           <button class="btn btn-gold" onclick="guardarImpresion()">Guardar Impresión</button>
@@ -1142,6 +1230,17 @@
 
 <div id="toast"></div>
 
+<!-- ── FOTO LIGHTBOX ── -->
+<div id="foto-lightbox" onclick="if(event.target===this)closeLightbox()">
+  <button class="lb-close" onclick="closeLightbox()">✕</button>
+  <img id="lb-img" src="" alt="foto" />
+  <div class="lb-nav">
+    <button class="lb-btn" id="lb-prev" onclick="navLightbox(-1)">← Anterior</button>
+    <span class="lb-counter" id="lb-counter">1 / 1</span>
+    <button class="lb-btn" id="lb-next" onclick="navLightbox(1)">Siguiente →</button>
+  </div>
+</div>
+
 <script>
 // ── constantes ────────────────────────────────────────────────────────────────
 const FACTOR    = { "10": 10/24, "14": 14/24, "18": 18/24, "24": 1 };
@@ -1154,6 +1253,148 @@ const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJ
 // ── caché en memoria ──────────────────────────────────────────────────────────
 let _data = null;
 let _editingImpId = null;   // id de la impresión que se está editando (null = nueva)
+
+// ── foto state ────────────────────────────────────────────────────────────────
+let _impFotos = [];   // [{b64, name}] para el formulario de impresiones
+let _vacFotos = [];   // [{b64, name}] para el formulario de vaciado
+
+const FOTO_MAX = 5;
+const FOTO_MAX_SIDE = 1000;  // px máximo en cualquier lado
+const FOTO_QUALITY  = 0.72;
+
+// Comprime una imagen a base64 reduciendo al tamaño máximo
+function comprimirImagen(file, maxSide = FOTO_MAX_SIDE, quality = FOTO_QUALITY) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = reject;
+    reader.onload = ev => {
+      const img = new Image();
+      img.onerror = reject;
+      img.onload = () => {
+        let { width, height } = img;
+        if (width > maxSide || height > maxSide) {
+          if (width >= height) { height = Math.round(height * maxSide / width); width = maxSide; }
+          else                 { width  = Math.round(width  * maxSide / height); height = maxSide; }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = width; canvas.height = height;
+        canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL('image/jpeg', quality));
+      };
+      img.src = ev.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+// Renderiza la cuadrícula de thumbs para un contexto ('imp' o 'vac')
+function renderFotoThumbs(ctx) {
+  const arr       = ctx === 'imp' ? _impFotos : _vacFotos;
+  const thumbsEl  = document.getElementById(`${ctx}-foto-thumbs`);
+  const countEl   = document.getElementById(`${ctx}-foto-count`);
+  if (!thumbsEl) return;
+
+  thumbsEl.innerHTML = arr.map((f, i) => `
+    <div class="foto-thumb-wrap">
+      <img src="${f.b64}" title="${f.name || ''}" onclick="openLightbox(${JSON.stringify(arr.map(x=>x.b64))},${i})" />
+      <button class="foto-thumb-del" onclick="fotoRemove('${ctx}',${i})" title="Eliminar foto">✕</button>
+    </div>`).join('');
+
+  if (countEl) {
+    countEl.textContent = arr.length > 0
+      ? `${arr.length} foto${arr.length !== 1 ? 's' : ''} adjunta${arr.length !== 1 ? 's' : ''}`
+      : '';
+  }
+}
+
+async function fotoFilePicked(event, ctx) {
+  const files = Array.from(event.target.files || []);
+  event.target.value = '';    // allow re-picking same file
+  await agregarFotos(files, ctx);
+}
+
+async function agregarFotos(files, ctx) {
+  const arr = ctx === 'imp' ? _impFotos : _vacFotos;
+  const restantes = FOTO_MAX - arr.length;
+  if (restantes <= 0) { toast(`Máximo ${FOTO_MAX} fotos por registro`, 'var(--yellow)'); return; }
+  const lote = files.slice(0, restantes);
+  if (files.length > restantes) toast(`Solo se agregaron ${lote.length} foto(s): límite ${FOTO_MAX}`, 'var(--yellow)');
+
+  for (const f of lote) {
+    try {
+      const b64 = await comprimirImagen(f);
+      arr.push({ b64, name: f.name });
+    } catch(e) {
+      console.warn('foto compress err', e);
+    }
+  }
+  renderFotoThumbs(ctx);
+}
+
+function fotoRemove(ctx, idx) {
+  const arr = ctx === 'imp' ? _impFotos : _vacFotos;
+  arr.splice(idx, 1);
+  renderFotoThumbs(ctx);
+}
+
+function fotoDragOver(e, zoneId) {
+  e.preventDefault();
+  document.getElementById(zoneId)?.classList.add('dragover');
+}
+function fotoDragLeave(zoneId) {
+  document.getElementById(zoneId)?.classList.remove('dragover');
+}
+async function fotoDrop(e, ctx) {
+  e.preventDefault();
+  fotoDragLeave(`${ctx}-foto-zone`);
+  const files = Array.from(e.dataTransfer.files || []).filter(f => f.type.startsWith('image/'));
+  await agregarFotos(files, ctx);
+}
+
+// ── Lightbox ──────────────────────────────────────────────────────────────────
+let _lbSrcs = [];
+let _lbIdx  = 0;
+
+function openLightbox(srcs, idx = 0) {
+  _lbSrcs = srcs;
+  _lbIdx  = idx;
+  _renderLb();
+  document.getElementById('foto-lightbox').classList.add('open');
+  document.addEventListener('keydown', _lbKey);
+}
+function closeLightbox() {
+  document.getElementById('foto-lightbox').classList.remove('open');
+  document.removeEventListener('keydown', _lbKey);
+}
+function navLightbox(dir) {
+  _lbIdx = Math.max(0, Math.min(_lbSrcs.length - 1, _lbIdx + dir));
+  _renderLb();
+}
+function _lbKey(e) {
+  if (e.key === 'Escape')      closeLightbox();
+  else if (e.key === 'ArrowLeft')  navLightbox(-1);
+  else if (e.key === 'ArrowRight') navLightbox(1);
+}
+function _renderLb() {
+  document.getElementById('lb-img').src = _lbSrcs[_lbIdx] || '';
+  document.getElementById('lb-counter').textContent = `${_lbIdx + 1} / ${_lbSrcs.length}`;
+  document.getElementById('lb-prev').disabled = _lbIdx === 0;
+  document.getElementById('lb-next').disabled = _lbIdx === _lbSrcs.length - 1;
+}
+
+// Mini galería estática (solo lectura) para vistas de detalle
+function renderFotoGaleria(fotos, label = '📷 Fotos') {
+  if (!fotos || fotos.length === 0) return '';
+  const srcs = fotos.map(f => typeof f === 'string' ? f : f.b64);
+  return `<div style="margin-top:14px">
+    <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px">${label}</div>
+    <div style="display:flex;flex-wrap:wrap;gap:8px">
+      ${srcs.map((s,i) => `<img src="${s}" onclick="openLightbox(${JSON.stringify(srcs)},${i})"
+        style="width:72px;height:72px;object-fit:cover;border-radius:6px;border:1px solid var(--border);cursor:pointer;transition:opacity .15s"
+        onmouseover="this.style.opacity='.8'" onmouseout="this.style.opacity='1'" />`).join('')}
+    </div>
+  </div>`;
+}
 
 const MULT_DEFAULT = { '10': 10, '14': 14, '18': 18 };
 
@@ -2663,6 +2904,9 @@ function cargarTandaParaCompletar() {
     if (el) el.value = '0';
   });
   document.getElementById('c-preview').style.display = 'none';
+  // Limpiar fotos al cambiar de tanda
+  _vacFotos = [];
+  renderFotoThumbs('vac');
   formEl.style.display = 'block';
 }
 
@@ -2807,6 +3051,7 @@ async function completarTanda() {
     kilate_sobro:        24,
     rendimiento_pct:     finoEntrada > 0 ? +(totalFino / finoEntrada * 100).toFixed(2) : 0,
     dias_vaciado:        diasVac,
+    fotos_vaciado:       _vacFotos.length > 0 ? _vacFotos.map(f => f.b64) : undefined,
   };
 
   t.completada   = true;
@@ -2847,6 +3092,8 @@ async function completarTanda() {
   try {
     await syncCompletar(codigo);
     toast(`Tanda ${codigo} completada ✓`);
+    _vacFotos = [];
+    renderFotoThumbs('vac');
     refreshSelector();
     showPage('tandas');
   } catch(e) {
@@ -3036,6 +3283,7 @@ function openDetalle(codigo) {
         <span class="label">⏱ En vaciado desde</span>
         <span class="value" style="color:var(--blue)">${t.fecha_vaciado} · ${Math.round((new Date()-new Date(t.fecha_vaciado))/86400000)} días</span>
       </div>` : ''}
+      ${renderFotoGaleria(c.fotos_vaciado, '📸 Fotos del vaciado')}
     `;
     // Sobrante tracking: show where this tanda's leftover gold went
     if (c.sobro_g > 0.001) {
@@ -3657,6 +3905,7 @@ function guardarImpresion() {
     costo_por_pieza_buena: cpp_buena !== null ? +cpp_buena.toFixed(4) : null,
     tasa_exito:            buen !== null ? +(buen / totalPiezas).toFixed(4) : null,
     notas,
+    fotos:                 _impFotos.length > 0 ? _impFotos.map(f => f.b64) : undefined,
   };
 
   if (_editingImpId) {
@@ -3722,6 +3971,9 @@ function limpiarImpresion() {
   if (totEl) totEl.style.display = 'none';
   document.getElementById('imp-preview').style.display = 'none';
   document.getElementById('imp-error').style.display   = 'none';
+  // Limpiar fotos
+  _impFotos = [];
+  renderFotoThumbs('imp');
   updateImpCodigoPreview();
 }
 
@@ -3787,6 +4039,10 @@ function editarImpresion(id) {
       const estC = document.getElementById(`imp-c-${k}k-estimate`); if (estC) estC.innerHTML = '';
     }
   });
+
+  // Cargar fotos existentes
+  _impFotos = (imp.fotos || []).map(b64 => ({ b64, name: '' }));
+  renderFotoThumbs('imp');
 
   // Recalcular previews
   calcImpKaratesAll();
@@ -3899,6 +4155,9 @@ function renderImpresiones() {
             ? `<span class="imp-sub">✅ ${imp.buenas} buenas · ❌ ${imp.rotas ?? 0} rotas</span>`
             : '<span class="imp-sub" style="color:var(--muted);font-style:italic">Resultado pendiente</span>')}
         ${imp.notas ? `<span class="imp-sub" style="color:var(--muted);font-style:italic">${imp.notas}</span>` : ''}
+        ${imp.fotos && imp.fotos.length > 0
+          ? `<div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap">${imp.fotos.map((s,i)=>`<img src="${s}" onclick="openLightbox(${JSON.stringify(imp.fotos)},${i});event.stopPropagation()" style="width:48px;height:48px;object-fit:cover;border-radius:5px;border:1px solid var(--border);cursor:pointer;transition:opacity .15s" onmouseover="this.style.opacity='.8'" onmouseout="this.style.opacity='1'" />`).join('')}</div>`
+          : ''}
       </div>
       <div class="imp-right">
         ${pct != null ? `<div class="imp-kpi">
