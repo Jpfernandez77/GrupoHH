@@ -483,7 +483,7 @@
     <div id="page-dashboard" class="page active">
       <h2>Dashboard</h2>
 
-      <div class="stats-4" id="stats-strip"></div>
+      <div class="stats-5" id="stats-strip"></div>
 
       <div class="card" style="margin-bottom:20px">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px">
@@ -1728,14 +1728,22 @@ function renderDashboard() {
   const completadas = d.tandas.filter(t => t.completada).length;
 
   let totalPiezas = 0, totalMalas = 0;
-  d.tandas.filter(t => t.completada).forEach(t => {
+  let totalMermaG = 0, totalFinoAcc = 0;
+  d.tandas.filter(t => t.completada && t.completacion).forEach(t => {
     ['10','14','18'].forEach(k => {
       totalPiezas += t.completacion.produccion[k].piezas || 0;
       totalMalas  += t.completacion.produccion[k].piezas_malas || 0;
     });
+    const fino    = finoTanda(t);
+    const finoSal = t.completacion.total_fino_salida_g || 0;
+    const sobro   = t.completacion.sobro_g || 0;
+    totalMermaG  += Math.max(0, fino - finoSal - sobro);
+    totalFinoAcc += fino;
   });
-  const errorPct = totalPiezas > 0 ? (totalMalas / totalPiezas * 100) : 0;
-  const errorColor = errorPct === 0 ? 'var(--green)' : errorPct < 5 ? 'var(--gold)' : 'var(--red)';
+  const errorPct  = totalPiezas > 0 ? (totalMalas / totalPiezas * 100) : 0;
+  const errorColor= errorPct === 0 ? 'var(--green)' : errorPct < 5 ? 'var(--gold)' : 'var(--red)';
+  const mermaAvgPct = totalFinoAcc > 0 ? (totalMermaG / totalFinoAcc * 100) : 0;
+  const mermaColor  = mermaAvgPct < 2 ? 'var(--green)' : mermaAvgPct < 5 ? 'var(--gold)' : 'var(--red)';
 
   document.getElementById('stats-strip').innerHTML = `
     <div class="stat-card">
@@ -1756,7 +1764,12 @@ function renderDashboard() {
     <div class="stat-card">
       <div class="s-label">% Defectos</div>
       <div class="s-value" style="color:${errorColor};font-size:22px">${fmtNum(errorPct,1)}%</div>
-      <div class="s-sub">${totalMalas} piezas malas / ${totalPiezas} total</div>
+      <div class="s-sub">${totalMalas} malas / ${totalPiezas} piezas</div>
+    </div>
+    <div class="stat-card">
+      <div class="s-label">🔥 Merma total acum.</div>
+      <div class="s-value" style="color:${mermaColor};font-size:20px">${fmtNum(totalMermaG,2)} g</div>
+      <div class="s-sub" style="color:${mermaColor}">${fmtNum(mermaAvgPct,2)}% del fino procesado</div>
     </div>
   `;
 
@@ -1854,6 +1867,18 @@ function renderMensual(yearMonth) {
   const vacArr     = completadas.map(t => t.completacion?.dias_vaciado).filter(v => v != null);
   const vacProm    = vacArr.length > 0 ? vacArr.reduce((s,d) => s+d, 0) / vacArr.length : null;
 
+  // Merma del mes
+  let mermaGMes = 0, finoMes = 0;
+  completadas.forEach(t => {
+    const fino    = finoTanda(t);
+    const finoSal = t.completacion.total_fino_salida_g || 0;
+    const sobro   = t.completacion.sobro_g || 0;
+    mermaGMes += Math.max(0, fino - finoSal - sobro);
+    finoMes   += fino;
+  });
+  const mermaPctMes  = finoMes > 0 ? (mermaGMes / finoMes * 100) : 0;
+  const mermaColorM  = mermaPctMes < 2 ? 'var(--green)' : mermaPctMes < 5 ? 'var(--gold)' : 'var(--red)';
+
   document.getElementById('monthly-strip').innerHTML = `
     <div class="stat-card">
       <div class="s-label">Tandas del mes</div>
@@ -1874,6 +1899,11 @@ function renderMensual(yearMonth) {
       <div class="s-label">Piezas / % Defectos</div>
       <div class="s-value">${totalPiezas}</div>
       <div class="s-sub" style="color:${mErrColor}">${fmtNum(mErrorPct,1)}% defectos (${totalMalas} malas)</div>
+    </div>
+    <div class="stat-card">
+      <div class="s-label">🔥 Merma del mes</div>
+      <div class="s-value" style="font-size:20px;color:${mermaColorM}">${completadas.length ? fmtNum(mermaGMes,2)+' g' : '—'}</div>
+      <div class="s-sub" style="color:${mermaColorM}">${completadas.length ? fmtNum(mermaPctMes,2)+'% del fino' : 'Sin tandas completadas'}</div>
     </div>
     <div class="stat-card">
       <div class="s-label">Tiempo prom. entrega</div>
@@ -2354,13 +2384,13 @@ function generarRptRendimiento() {
 
   const rows = _rptRend.map(t => {
     const fino      = finoTanda(t);
-    const salida    = t.completacion.total_salida_g || 0;
+    const finoSal   = t.completacion.total_fino_salida_g || 0;
     const sobro     = t.completacion.sobro_g || 0;
-    const merma     = Math.max(0, fino - salida - sobro);
+    const merma     = Math.max(0, fino - finoSal - sobro);
     const mermaPct  = fino > 0 ? merma / fino * 100 : 0;
     const rend      = t.completacion.rendimiento_pct;
     const diasVac   = t.completacion.dias_vaciado ?? null;
-    return { t, fino, salida, sobro, merma, mermaPct, rend, diasVac };
+    return { t, fino, finoSal, sobro, merma, mermaPct, rend, diasVac };
   });
 
   const avgRend    = rows.reduce((s,r)=>s+r.rend, 0) / rows.length;
@@ -2406,11 +2436,11 @@ function exportarCSVRend() {
   if (!_rptRend.length) return;
   const cols = ['Código','Fecha','Fino Entrada (g)','Producido (g)','Sobrante (g)','Merma (g)','Merma (%)','Rendimiento (%)','Días en Vaciado'];
   const rows = _rptRend.map(t => {
-    const fino  = finoTanda(t);
-    const salida = t.completacion.total_salida_g||0;
-    const sobro  = t.completacion.sobro_g||0;
-    const merma  = Math.max(0, fino-salida-sobro);
-    return [t.codigo, t.fecha, fino.toFixed(4), salida.toFixed(4), sobro.toFixed(4), merma.toFixed(4), (fino>0?merma/fino*100:0).toFixed(2), t.completacion.rendimiento_pct.toFixed(2), t.completacion.dias_vaciado??''];
+    const fino     = finoTanda(t);
+    const finoSal  = t.completacion.total_fino_salida_g||0;
+    const sobro    = t.completacion.sobro_g||0;
+    const merma    = Math.max(0, fino-finoSal-sobro);
+    return [t.codigo, t.fecha, fino.toFixed(4), finoSal.toFixed(4), sobro.toFixed(4), merma.toFixed(4), (fino>0?merma/fino*100:0).toFixed(2), t.completacion.rendimiento_pct.toFixed(2), t.completacion.dias_vaciado??''];
   });
   const desde = document.getElementById('rr-desde').value;
   const hasta  = document.getElementById('rr-hasta').value;
@@ -2539,7 +2569,15 @@ function renderTendencias() {
     const costo = tandas.reduce((s,t)=>s+t.costo_total,  0);
     const rends = completadas.map(t=>t.completacion.rendimiento_pct).filter(v=>v!=null);
     const avgRend = rends.length ? rends.reduce((s,v)=>s+v,0)/rends.length : null;
-    return { p10, p14, p18, costog: oro>0?costo/oro:null, avgRend };
+    // merma promedio del mes
+    let mG = 0, mF = 0;
+    completadas.forEach(t => {
+      const fi = finoTanda(t);
+      mG += Math.max(0, fi - (t.completacion.total_fino_salida_g||0) - (t.completacion.sobro_g||0));
+      mF += fi;
+    });
+    const avgMerma = mF > 0 ? mG / mF * 100 : null;
+    return { p10, p14, p18, costog: oro>0?costo/oro:null, avgRend, avgMerma };
   });
 
   const impData = months.map(({ ym }) => {
@@ -2573,16 +2611,22 @@ function renderTendencias() {
       borderColor:blue, backgroundColor:'rgba(106,180,240,.1)', tension:.35, fill:true, pointRadius:4, spanGaps:true }],
   });
 
-  // Chart 3 — rendimiento
-  const allRends = monthData.map(m=>m.avgRend).filter(v=>v!=null);
-  const minRend  = allRends.length ? Math.floor(Math.min(...allRends) - 3) : 0;
+  // Chart 3 — rendimiento + merma
+  const allRends  = monthData.map(m=>m.avgRend).filter(v=>v!=null);
+  const minRend   = allRends.length ? Math.floor(Math.min(...allRends) - 3) : 0;
+  const red2      = 'rgba(224,92,92,.85)';
   mkTrendChart('chart-trend-rend', 'line', {
     labels,
-    datasets:[{ label:'Rendimiento %', data:monthData.map(m=>m.avgRend!=null?+m.avgRend.toFixed(1):null),
-      borderColor:green, backgroundColor:'rgba(106,175,130,.1)', tension:.35, fill:true, pointRadius:4, spanGaps:true }],
+    datasets:[
+      { label:'Rendimiento %', data:monthData.map(m=>m.avgRend!=null?+m.avgRend.toFixed(1):null),
+        borderColor:green, backgroundColor:'rgba(106,175,130,.08)', tension:.35, fill:false, pointRadius:4, spanGaps:true, yAxisID:'yR' },
+      { label:'Merma %', data:monthData.map(m=>m.avgMerma!=null?+m.avgMerma.toFixed(2):null),
+        borderColor:red2,  backgroundColor:'rgba(224,92,92,.08)',   tension:.35, fill:false, pointRadius:4, spanGaps:true, yAxisID:'yM', borderDash:[4,3] },
+    ],
   }, { scales:{
-    x:{ticks:{color:'#8a8070'},grid:{color:'rgba(255,255,255,.05)'}},
-    y:{ticks:{color:'#8a8070'},grid:{color:'rgba(255,255,255,.05)'},beginAtZero:false, min:Math.max(0,minRend), max:100},
+    x:  { ticks:{color:'#8a8070'}, grid:{color:'rgba(255,255,255,.05)'} },
+    yR: { type:'linear', position:'left',  ticks:{color:green,  callback:v=>v+'%'}, grid:{color:'rgba(255,255,255,.05)'}, min:Math.max(0,minRend), max:100, title:{display:true,text:'Rend. %',color:green,  font:{size:10}} },
+    yM: { type:'linear', position:'right', ticks:{color:red2,   callback:v=>v+'%'}, grid:{drawOnChartArea:false}, min:0, title:{display:true,text:'Merma %',color:red2, font:{size:10}} },
   }});
 
   // Chart 4 — tasa éxito impresiones
@@ -3273,6 +3317,18 @@ function openDetalle(codigo) {
         <span class="label">Rendimiento</span>
         <span class="value gold">${fmtNum(c.rendimiento_pct, 1)}%</span>
       </div>
+      ${(() => {
+        const finoIn  = finoTanda(t);
+        const finoSal = c.total_fino_salida_g || 0;
+        const sobro   = c.sobro_g || 0;
+        const mermaG  = Math.max(0, finoIn - finoSal - sobro);
+        const mermaPct= finoIn > 0 ? mermaG / finoIn * 100 : 0;
+        const mc      = mermaPct < 2 ? 'var(--green)' : mermaPct < 5 ? 'var(--gold)' : 'var(--red)';
+        return `<div class="result-row">
+          <span class="label">🔥 Merma (oro no recuperado)</span>
+          <span class="value" style="color:${mc}">${fmtNum(mermaG, 4)} g <span style="font-size:12px;opacity:.8">(${fmtNum(mermaPct,2)}% del fino)</span></span>
+        </div>`;
+      })()}
       ${c.dias_vaciado != null ? `
       <div class="result-row">
         <span class="label">⏱ Tiempo en vaciado</span>
