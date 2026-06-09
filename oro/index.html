@@ -437,6 +437,24 @@
 
   /* badge foto en listados */
   .foto-badge { font-size:11px; color:var(--muted); margin-left:6px; }
+
+  /* ── precios / liga ── */
+  .liga-table { width:100%; border-collapse:collapse; margin-top:14px; }
+  .liga-table th { text-align:center; padding:8px 10px; font-size:11px; color:var(--muted); font-weight:600; text-transform:uppercase; letter-spacing:.6px; border-bottom:2px solid var(--border); }
+  .liga-table th:first-child { text-align:left; }
+  .liga-table td { padding:8px 8px; vertical-align:top; border-bottom:1px solid var(--border); }
+  .liga-table td:first-child { font-weight:700; color:var(--gold-lt); font-size:14px; white-space:nowrap; vertical-align:middle; padding-left:0; width:42px; }
+  .liga-cell { display:flex; flex-direction:column; gap:4px; min-width:110px; }
+  .liga-cell input[type=text] { font-size:12px; padding:4px 8px; height:30px; }
+  .liga-cell-lbl { font-size:10px; color:var(--muted); text-transform:uppercase; letter-spacing:.4px; margin-bottom:2px; }
+  .liga-cell-pg { font-size:11px; color:var(--gold); font-weight:600; margin-top:2px; min-height:14px; }
+  .cbadge { display:inline-flex; align-items:center; gap:4px; font-size:12px; font-weight:600; padding:3px 10px; border-radius:12px; }
+  .cbadge-am { background:rgba(240,200,74,.1); border:1px solid rgba(240,200,74,.3); color:var(--yellow); }
+  .cbadge-bl { background:rgba(220,225,235,.06); border:1px solid rgba(200,205,215,.25); color:#c8cfe0; }
+  .cbadge-ro { background:rgba(240,160,160,.08); border:1px solid rgba(240,160,160,.25); color:#f0a8b8; }
+  .prec-pg-box { display:inline-flex; align-items:center; gap:8px; background:rgba(196,168,130,.07); border:1px solid rgba(196,168,130,.18); border-radius:6px; padding:7px 14px; margin-top:10px; font-size:13px; }
+  .imp-costo-hint { font-size:11px; color:var(--muted); margin-top:4px; }
+  .imp-costo-hint.has-val { color:var(--gold); }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
 </head>
@@ -473,6 +491,7 @@
     <button onclick="showPage('impresiones')">🖨 &nbsp;Impresiones</button>
     <div class="divider"></div>
     <button onclick="showPage('calculadora')">🧮 &nbsp;Calculadora</button>
+    <button onclick="showPage('precios')">⚙️ &nbsp;Precios</button>
   </nav>
 
   <main>
@@ -753,30 +772,48 @@
               <div class="field"><label>Piezas producidas</label>
                 <input type="number" id="c-10k-piezas" placeholder="0" min="0" step="1" value="0" onchange="calcularPreview()" /></div>
               <div class="field mt-16"><label>Piezas con defecto</label>
-                <input type="number" id="c-10k-malas" placeholder="0" min="0" step="1" value="0" onchange="calcularPreview()"
-                  /></div>
+                <input type="number" id="c-10k-malas" placeholder="0" min="0" step="1" value="0" onchange="calcularPreview()" /></div>
               <div class="field mt-16"><label>Peso total (g)</label>
                 <input type="text" inputmode="decimal" id="c-10k-peso" placeholder="0.00" value="0" onchange="calcularPreview()" onblur="evalGramInput(this)" /></div>
+              <div class="field mt-16"><label>Color de liga</label>
+                <select id="c-10k-color" onchange="calcularPreview()">
+                  <option value="">— Sin especificar —</option>
+                  <option value="amarillo">🟡 Amarillo</option>
+                  <option value="blanco">⚪ Blanco</option>
+                  <option value="rosa">🌸 Rosa</option>
+                </select></div>
             </div>
             <div class="karat-card">
               <h4>🔶 Oro 14k</h4>
               <div class="field"><label>Piezas producidas</label>
                 <input type="number" id="c-14k-piezas" placeholder="0" min="0" step="1" value="0" onchange="calcularPreview()" /></div>
               <div class="field mt-16"><label>Piezas con defecto</label>
-                <input type="number" id="c-14k-malas" placeholder="0" min="0" step="1" value="0" onchange="calcularPreview()"
-                  /></div>
+                <input type="number" id="c-14k-malas" placeholder="0" min="0" step="1" value="0" onchange="calcularPreview()" /></div>
               <div class="field mt-16"><label>Peso total (g)</label>
                 <input type="text" inputmode="decimal" id="c-14k-peso" placeholder="0.00" value="0" onchange="calcularPreview()" onblur="evalGramInput(this)" /></div>
+              <div class="field mt-16"><label>Color de liga</label>
+                <select id="c-14k-color" onchange="calcularPreview()">
+                  <option value="">— Sin especificar —</option>
+                  <option value="amarillo">🟡 Amarillo</option>
+                  <option value="blanco">⚪ Blanco</option>
+                  <option value="rosa">🌸 Rosa</option>
+                </select></div>
             </div>
             <div class="karat-card">
               <h4>🟡 Oro 18k</h4>
               <div class="field"><label>Piezas producidas</label>
                 <input type="number" id="c-18k-piezas" placeholder="0" min="0" step="1" value="0" onchange="calcularPreview()" /></div>
               <div class="field mt-16"><label>Piezas con defecto</label>
-                <input type="number" id="c-18k-malas" placeholder="0" min="0" step="1" value="0" onchange="calcularPreview()"
-                  /></div>
+                <input type="number" id="c-18k-malas" placeholder="0" min="0" step="1" value="0" onchange="calcularPreview()" /></div>
               <div class="field mt-16"><label>Peso total (g)</label>
                 <input type="text" inputmode="decimal" id="c-18k-peso" placeholder="0.00" value="0" onchange="calcularPreview()" onblur="evalGramInput(this)" /></div>
+              <div class="field mt-16"><label>Color de liga</label>
+                <select id="c-18k-color" onchange="calcularPreview()">
+                  <option value="">— Sin especificar —</option>
+                  <option value="amarillo">🟡 Amarillo</option>
+                  <option value="blanco">⚪ Blanco</option>
+                  <option value="rosa">🌸 Rosa</option>
+                </select></div>
             </div>
           </div>
         </div>
@@ -895,6 +932,13 @@
               <input type="number" id="imp-10k-rotas" placeholder="0" min="0" step="1" oninput="calcImpKarat('10')" /></div>
             <div class="field mt-16"><label>Peso modelo (g)</label>
               <input type="text" inputmode="decimal" id="imp-10k-peso" placeholder="0.00" oninput="calcImpKarat('10')" onblur="evalGramInput(this)" /></div>
+            <div class="field mt-16"><label>Color</label>
+              <select id="imp-10k-color" onchange="calcImpKaratesAll()">
+                <option value="">— Sin especificar —</option>
+                <option value="amarillo">🟡 Amarillo</option>
+                <option value="blanco">⚪ Blanco</option>
+                <option value="rosa">🌸 Rosa</option>
+              </select></div>
             <div id="imp-10k-estimate" style="margin-top:8px"></div>
           </div>
           <div class="karat-card">
@@ -907,6 +951,13 @@
               <input type="number" id="imp-14k-rotas" placeholder="0" min="0" step="1" oninput="calcImpKarat('14')" /></div>
             <div class="field mt-16"><label>Peso modelo (g)</label>
               <input type="text" inputmode="decimal" id="imp-14k-peso" placeholder="0.00" oninput="calcImpKarat('14')" onblur="evalGramInput(this)" /></div>
+            <div class="field mt-16"><label>Color</label>
+              <select id="imp-14k-color" onchange="calcImpKaratesAll()">
+                <option value="">— Sin especificar —</option>
+                <option value="amarillo">🟡 Amarillo</option>
+                <option value="blanco">⚪ Blanco</option>
+                <option value="rosa">🌸 Rosa</option>
+              </select></div>
             <div id="imp-14k-estimate" style="margin-top:8px"></div>
           </div>
           <div class="karat-card">
@@ -919,6 +970,13 @@
               <input type="number" id="imp-18k-rotas" placeholder="0" min="0" step="1" oninput="calcImpKarat('18')" /></div>
             <div class="field mt-16"><label>Peso modelo (g)</label>
               <input type="text" inputmode="decimal" id="imp-18k-peso" placeholder="0.00" oninput="calcImpKarat('18')" onblur="evalGramInput(this)" /></div>
+            <div class="field mt-16"><label>Color</label>
+              <select id="imp-18k-color" onchange="calcImpKaratesAll()">
+                <option value="">— Sin especificar —</option>
+                <option value="amarillo">🟡 Amarillo</option>
+                <option value="blanco">⚪ Blanco</option>
+                <option value="rosa">🌸 Rosa</option>
+              </select></div>
             <div id="imp-18k-estimate" style="margin-top:8px"></div>
           </div>
         </div>
@@ -980,7 +1038,10 @@
         <div id="imp-costo-single" class="grid-2">
           <div class="field">
             <label>Costo total de impresión ($)</label>
-            <input type="text" inputmode="decimal" id="imp-costo" placeholder="0.00" oninput="calcImpKaratesAll()" onblur="evalGramInput(this)" />
+            <input type="text" inputmode="decimal" id="imp-costo" placeholder="0.00"
+              oninput="document.getElementById('imp-costo').dataset.manual='1'; calcImpKaratesAll()"
+              onblur="evalGramInput(this)" />
+            <div class="imp-costo-hint" id="imp-costo-hint"></div>
           </div>
         </div>
 
@@ -993,7 +1054,9 @@
                 Costo impresión ($)
               </label>
               <input type="text" inputmode="decimal" id="imp-costo-resina" placeholder="0.00"
-                oninput="calcImpCostoAmbos()" onblur="evalGramInput(this)" />
+                oninput="document.getElementById('imp-costo-resina').dataset.manual='1'; calcImpCostoAmbos()"
+                onblur="evalGramInput(this)" />
+              <div class="imp-costo-hint" id="imp-costo-resina-hint"></div>
             </div>
             <div class="field">
               <label style="display:flex;align-items:center;gap:6px">
@@ -1151,6 +1214,153 @@
       </div>
 
       <div id="calc-total"></div>
+    </div>
+
+    <!-- ── PRECIOS ── -->
+    <div id="page-precios" class="page">
+      <h2>⚙️ Precios de Materiales</h2>
+
+      <!-- Resina -->
+      <div class="card">
+        <h3>🔷 Resina de Impresión</h3>
+        <p style="font-size:13px;color:var(--muted);margin-bottom:16px">
+          El costo de impresión se calcula automáticamente: <strong>peso del modelo (g) × precio/g</strong>.
+          Puedes editar el resultado manualmente si es necesario.
+        </p>
+        <div class="grid-2">
+          <div class="field">
+            <label>Precio por bote ($)</label>
+            <input type="text" inputmode="decimal" id="prec-res-precio" placeholder="3956.00"
+              oninput="updatePrecResPreview()" onblur="evalGramInput(this)" />
+          </div>
+          <div class="field">
+            <label>Tamaño del bote (g)</label>
+            <input type="text" inputmode="decimal" id="prec-res-tamano" placeholder="500"
+              oninput="updatePrecResPreview()" onblur="evalGramInput(this)" />
+          </div>
+        </div>
+        <div id="prec-res-preview" class="prec-pg-box" style="display:none">
+          <span style="color:var(--muted)">Precio por gramo:</span>
+          <span id="prec-res-pg" style="font-weight:700;color:var(--gold-lt)">—</span>
+        </div>
+      </div>
+
+      <!-- Liga -->
+      <div class="card">
+        <h3>💎 Liga por Color y Kilataje</h3>
+        <p style="font-size:13px;color:var(--muted);margin-bottom:4px">
+          Ingresa el nombre de la aleación y el precio por cada <strong>100 g</strong>.
+          El sistema calculará el uso y costo de liga al completar una tanda.
+        </p>
+        <p style="font-size:12px;color:var(--muted);margin-bottom:2px">
+          Fórmula de uso: <code style="background:rgba(255,255,255,.06);padding:1px 5px;border-radius:3px">Liga (g) = Peso final × (24 − k) ÷ 24</code>
+        </p>
+        <p style="font-size:11px;color:var(--muted);margin-bottom:16px;opacity:.75">
+          Ej. pieza 1 g en 14k → liga = 1 × 10/24 = 0.4167 g
+        </p>
+
+        <table class="liga-table">
+          <thead>
+            <tr>
+              <th>k</th>
+              <th><span class="cbadge cbadge-am">🟡 Amarillo</span></th>
+              <th><span class="cbadge cbadge-bl">⚪ Blanco</span></th>
+              <th><span class="cbadge cbadge-ro">🌸 Rosa</span></th>
+            </tr>
+          </thead>
+          <tbody>
+            <!-- 10k -->
+            <tr>
+              <td>10k</td>
+              <td><div class="liga-cell">
+                <div class="liga-cell-lbl">Aleación</div>
+                <input type="text" id="liga-am-10-nom" placeholder="ej. Ag10Zn17" />
+                <div class="liga-cell-lbl">$ / 100 g</div>
+                <input type="text" inputmode="decimal" id="liga-am-10-prec" placeholder="0.00"
+                  oninput="updateLigaPreview('am','10')" onblur="evalGramInput(this)" />
+                <div class="liga-cell-pg" id="liga-am-10-pg"></div>
+              </div></td>
+              <td><div class="liga-cell">
+                <div class="liga-cell-lbl">Aleación</div>
+                <input type="text" id="liga-bl-10-nom" placeholder="nombre" />
+                <div class="liga-cell-lbl">$ / 100 g</div>
+                <input type="text" inputmode="decimal" id="liga-bl-10-prec" placeholder="0.00"
+                  oninput="updateLigaPreview('bl','10')" onblur="evalGramInput(this)" />
+                <div class="liga-cell-pg" id="liga-bl-10-pg"></div>
+              </div></td>
+              <td><div class="liga-cell">
+                <div class="liga-cell-lbl">Aleación</div>
+                <input type="text" id="liga-ro-10-nom" placeholder="nombre" />
+                <div class="liga-cell-lbl">$ / 100 g</div>
+                <input type="text" inputmode="decimal" id="liga-ro-10-prec" placeholder="0.00"
+                  oninput="updateLigaPreview('ro','10')" onblur="evalGramInput(this)" />
+                <div class="liga-cell-pg" id="liga-ro-10-pg"></div>
+              </div></td>
+            </tr>
+            <!-- 14k -->
+            <tr>
+              <td>14k</td>
+              <td><div class="liga-cell">
+                <div class="liga-cell-lbl">Aleación</div>
+                <input type="text" id="liga-am-14-nom" placeholder="ej. Ag10Zn17" />
+                <div class="liga-cell-lbl">$ / 100 g</div>
+                <input type="text" inputmode="decimal" id="liga-am-14-prec" placeholder="0.00"
+                  oninput="updateLigaPreview('am','14')" onblur="evalGramInput(this)" />
+                <div class="liga-cell-pg" id="liga-am-14-pg"></div>
+              </div></td>
+              <td><div class="liga-cell">
+                <div class="liga-cell-lbl">Aleación</div>
+                <input type="text" id="liga-bl-14-nom" placeholder="ej. Ni25Zn14" />
+                <div class="liga-cell-lbl">$ / 100 g</div>
+                <input type="text" inputmode="decimal" id="liga-bl-14-prec" placeholder="0.00"
+                  oninput="updateLigaPreview('bl','14')" onblur="evalGramInput(this)" />
+                <div class="liga-cell-pg" id="liga-bl-14-pg"></div>
+              </div></td>
+              <td><div class="liga-cell">
+                <div class="liga-cell-lbl">Aleación</div>
+                <input type="text" id="liga-ro-14-nom" placeholder="nombre" />
+                <div class="liga-cell-lbl">$ / 100 g</div>
+                <input type="text" inputmode="decimal" id="liga-ro-14-prec" placeholder="0.00"
+                  oninput="updateLigaPreview('ro','14')" onblur="evalGramInput(this)" />
+                <div class="liga-cell-pg" id="liga-ro-14-pg"></div>
+              </div></td>
+            </tr>
+            <!-- 18k -->
+            <tr>
+              <td>18k</td>
+              <td><div class="liga-cell">
+                <div class="liga-cell-lbl">Aleación</div>
+                <input type="text" id="liga-am-18-nom" placeholder="nombre" />
+                <div class="liga-cell-lbl">$ / 100 g</div>
+                <input type="text" inputmode="decimal" id="liga-am-18-prec" placeholder="0.00"
+                  oninput="updateLigaPreview('am','18')" onblur="evalGramInput(this)" />
+                <div class="liga-cell-pg" id="liga-am-18-pg"></div>
+              </div></td>
+              <td><div class="liga-cell">
+                <div class="liga-cell-lbl">Aleación</div>
+                <input type="text" id="liga-bl-18-nom" placeholder="ej. Ni25Zn14" />
+                <div class="liga-cell-lbl">$ / 100 g</div>
+                <input type="text" inputmode="decimal" id="liga-bl-18-prec" placeholder="0.00"
+                  oninput="updateLigaPreview('bl','18')" onblur="evalGramInput(this)" />
+                <div class="liga-cell-pg" id="liga-bl-18-pg"></div>
+              </div></td>
+              <td><div class="liga-cell">
+                <div class="liga-cell-lbl">Aleación</div>
+                <input type="text" id="liga-ro-18-nom" placeholder="nombre" />
+                <div class="liga-cell-lbl">$ / 100 g</div>
+                <input type="text" inputmode="decimal" id="liga-ro-18-prec" placeholder="0.00"
+                  oninput="updateLigaPreview('ro','18')" onblur="evalGramInput(this)" />
+                <div class="liga-cell-pg" id="liga-ro-18-pg"></div>
+              </div></td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="actions" style="margin-top:18px">
+          <button class="btn btn-gold" onclick="guardarPrecios()">💾 Guardar Precios</button>
+          <button class="btn btn-outline" onclick="renderPrecios()">↩ Descartar cambios</button>
+        </div>
+      </div>
     </div>
 
   </main>
@@ -1398,6 +1608,29 @@ function renderFotoGaleria(fotos, label = '📷 Fotos') {
 
 const MULT_DEFAULT = { '10': 10, '14': 14, '18': 18 };
 
+function getDefaultPrecios() {
+  return {
+    resina: { precio_bote: 3956, tamanio_bote: 500 },
+    liga: {
+      amarillo: {
+        '10': { nombre: 'Ag10Zn17', precio_100g: 8096 },
+        '14': { nombre: 'Ag10Zn17', precio_100g: 8096 },
+        '18': { nombre: '',         precio_100g: 0    },
+      },
+      blanco: {
+        '10': { nombre: '',         precio_100g: 0    },
+        '14': { nombre: 'Ni25Zn14', precio_100g: 2772 },
+        '18': { nombre: 'Ni25Zn14', precio_100g: 2772 },
+      },
+      rosa: {
+        '10': { nombre: '', precio_100g: 0 },
+        '14': { nombre: '', precio_100g: 0 },
+        '18': { nombre: '', precio_100g: 0 },
+      },
+    },
+  };
+}
+
 function getData() {
   const d = _data || { tandas: [], ultimo: 0, impresiones: [], ultimo_imp: 0 };
   if (!d.impresiones)            d.impresiones = [];
@@ -1407,7 +1640,32 @@ function getData() {
     resina: { '10': 10, '14': 14, '18': 18 },
     cera:   { '10': 10, '14': 14, '18': 18 },
   };
+  if (!d.precios) d.precios = getDefaultPrecios();
   return d;
+}
+
+// ── Helpers de precios ────────────────────────────────────────────────────────
+function getPrecioResina() {
+  const p = getData().precios?.resina;
+  return { precio_bote: p?.precio_bote || 3956, tamanio_bote: p?.tamanio_bote || 500 };
+}
+function precioResinaG() {
+  const { precio_bote, tamanio_bote } = getPrecioResina();
+  return tamanio_bote > 0 ? precio_bote / tamanio_bote : 0;
+}
+function getPrecioLigaEntry(color, kilate) {
+  const def = getDefaultPrecios().liga;
+  return getData().precios?.liga?.[color]?.[kilate]
+      || def[color]?.[kilate]
+      || { nombre: '', precio_100g: 0 };
+}
+function calcLigaGramos(peso_g, kilate) {
+  return peso_g * (24 - parseInt(kilate)) / 24;
+}
+function calcCostoLiga(peso_g, kilate, color) {
+  const ligaG = calcLigaGramos(peso_g, kilate);
+  const p100  = getPrecioLigaEntry(color, kilate).precio_100g || 0;
+  return ligaG * p100 / 100;
 }
 
 // Devuelve { mult, n, isLearned } para material+kilate
@@ -1535,6 +1793,7 @@ async function initData() {
       ultimo_imp:            Math.max(ultimoImp, configRow?.data?.ultimo_imp || 0),
       historial_calibracion: configRow?.data?.historial_calibracion || [],
       multiplicadores:       configRow?.data?.multiplicadores       || null,
+      precios:               configRow?.data?.precios               || null,
     };
     saveLocal();
     setSyncStatus('ok');
@@ -1607,6 +1866,7 @@ async function syncImpresiones() {
     ultimo_imp:            d.ultimo_imp             || 0,
     historial_calibracion: d.historial_calibracion  || [],
     multiplicadores:       d.multiplicadores        || null,
+    precios:               d.precios               || null,
   };
   try {
     await sbFetch('POST', '/rest/v1/tandas?on_conflict=codigo',
@@ -1657,7 +1917,7 @@ function showPage(id) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
   document.getElementById('page-' + id).classList.add('active');
-  const idx = { dashboard: 0, nueva: 1, completar: 2, tandas: 3, reportes: 4, impresiones: 5, calculadora: 6 };
+  const idx = { dashboard: 0, nueva: 1, completar: 2, tandas: 3, reportes: 4, impresiones: 5, calculadora: 6, precios: 7 };
   document.querySelectorAll('nav button')[idx[id]].classList.add('active');
 
   if (id === 'dashboard')    renderDashboard();
@@ -1667,6 +1927,7 @@ function showPage(id) {
   if (id === 'reportes')     initReportes();
   if (id === 'impresiones')  renderImpresiones();
   if (id === 'calculadora')  { renderCalibCard(); calcularMaterial(); }
+  if (id === 'precios')      renderPrecios();
 }
 
 // ── helpers ───────────────────────────────────────────────────────────────────
@@ -1718,6 +1979,80 @@ function renderBadge(t) {
   };
   const [cls, label] = map[estado] || map.pendiente;
   return `<span class="badge ${cls}">${label}</span>`;
+}
+
+// ── PRECIOS ───────────────────────────────────────────────────────────────────
+function renderPrecios() {
+  const d     = getData();
+  const res   = d.precios?.resina || {};
+  const ligaD = d.precios?.liga   || {};
+  const el    = id => document.getElementById(id);
+
+  if (el('prec-res-precio')) el('prec-res-precio').value = res.precio_bote  ?? 3956;
+  if (el('prec-res-tamano')) el('prec-res-tamano').value = res.tamanio_bote ?? 500;
+  updatePrecResPreview();
+
+  const COL_MAP = { am: 'amarillo', bl: 'blanco', ro: 'rosa' };
+  ['am','bl','ro'].forEach(ck => {
+    const col = COL_MAP[ck];
+    ['10','14','18'].forEach(k => {
+      const entry  = ligaD[col]?.[k] || {};
+      const nomEl  = el(`liga-${ck}-${k}-nom`);
+      const precEl = el(`liga-${ck}-${k}-prec`);
+      if (nomEl)  nomEl.value  = entry.nombre     || '';
+      if (precEl) precEl.value = entry.precio_100g || '';
+      updateLigaPreview(ck, k);
+    });
+  });
+}
+
+function guardarPrecios() {
+  const el = id => document.getElementById(id);
+  const precio_bote  = parseFloat(el('prec-res-precio')?.value) || 3956;
+  const tamanio_bote = parseFloat(el('prec-res-tamano')?.value) || 500;
+
+  const COL_MAP = { am: 'amarillo', bl: 'blanco', ro: 'rosa' };
+  const liga = {};
+  ['am','bl','ro'].forEach(ck => {
+    const col = COL_MAP[ck];
+    liga[col] = {};
+    ['10','14','18'].forEach(k => {
+      liga[col][k] = {
+        nombre:      (el(`liga-${ck}-${k}-nom`)?.value  || '').trim(),
+        precio_100g:  parseFloat(el(`liga-${ck}-${k}-prec`)?.value) || 0,
+      };
+    });
+  });
+
+  const d = getData();
+  d.precios = { resina: { precio_bote, tamanio_bote }, liga };
+  _data = d;
+  saveLocal();
+  syncImpresiones().catch(() => {});
+  toast('✓ Precios guardados');
+  updatePrecResPreview();
+}
+
+function updatePrecResPreview() {
+  const precio = parseFloat(document.getElementById('prec-res-precio')?.value) || 0;
+  const tamano = parseFloat(document.getElementById('prec-res-tamano')?.value) || 0;
+  const prev   = document.getElementById('prec-res-preview');
+  const pgEl   = document.getElementById('prec-res-pg');
+  if (!prev || !pgEl) return;
+  if (precio > 0 && tamano > 0) {
+    pgEl.textContent   = fmtMoney(precio / tamano) + ' / g';
+    prev.style.display = 'inline-flex';
+  } else {
+    prev.style.display = 'none';
+  }
+}
+
+function updateLigaPreview(ck, k) {
+  const precEl = document.getElementById(`liga-${ck}-${k}-prec`);
+  const pgEl   = document.getElementById(`liga-${ck}-${k}-pg`);
+  if (!precEl || !pgEl) return;
+  const p100 = parseFloat(precEl.value) || 0;
+  pgEl.textContent = p100 > 0 ? fmtMoney(p100 / 100) + '/g' : '';
 }
 
 // ── DASHBOARD ─────────────────────────────────────────────────────────────────
@@ -2948,6 +3283,11 @@ function cargarTandaParaCompletar() {
     if (el) el.value = '0';
   });
   document.getElementById('c-preview').style.display = 'none';
+  // Limpiar colores de liga al cambiar de tanda
+  ['10','14','18'].forEach(k => {
+    const colorEl = document.getElementById(`c-${k}k-color`);
+    if (colorEl) colorEl.value = '';
+  });
   // Limpiar fotos al cambiar de tanda
   _vacFotos = [];
   renderFotoThumbs('vac');
@@ -3006,6 +3346,50 @@ function calcularPreview() {
       </div>
     </div>` : '';
 
+  // ── Calcular liga ─────────────────────────────────────────────────────────
+  let ligaFilas = '', totalLigaG = 0, totalLigaCosto = 0, hayLiga = false;
+  const COLOR_LBL = { amarillo: '🟡 Amarillo', blanco: '⚪ Blanco', rosa: '🌸 Rosa' };
+  ['10','14','18'].forEach(k => {
+    const peso  = produccion[k].peso;
+    const color = document.getElementById(`c-${k}k-color`)?.value || '';
+    if (peso > 0 && color) {
+      hayLiga = true;
+      const ligaG  = calcLigaGramos(peso, k);
+      const cost   = calcCostoLiga(peso, k, color);
+      const entry  = getPrecioLigaEntry(color, k);
+      totalLigaG    += ligaG;
+      totalLigaCosto += cost;
+      ligaFilas += `<tr>
+        <td class="kl">${k}k</td>
+        <td><span class="cbadge cbadge-${color==='amarillo'?'am':color==='blanco'?'bl':'ro'}" style="font-size:11px;padding:2px 7px">${COLOR_LBL[color]}</span></td>
+        <td>${fmtNum(ligaG,4)} g</td>
+        <td style="color:var(--muted);font-size:12px">${entry.nombre || '—'}</td>
+        <td style="color:var(--gold-lt)">${fmtMoney(cost)}</td>
+      </tr>`;
+    } else if (peso > 0 && !color) {
+      ligaFilas += `<tr>
+        <td class="kl">${k}k</td>
+        <td colspan="3" style="color:var(--muted);font-size:12px">Sin color — selecciona para calcular liga</td>
+        <td>—</td>
+      </tr>`;
+    }
+  });
+  const ligaSection = hayLiga ? `
+    <hr class="sep">
+    <h3>💎 Liga utilizada</h3>
+    <table class="prod-table">
+      <thead><tr><th>k</th><th>Color</th><th>Liga (g)</th><th>Aleación</th><th>Costo</th></tr></thead>
+      <tbody>
+        ${ligaFilas}
+        <tr style="font-weight:600">
+          <td colspan="2">TOTAL</td>
+          <td>${fmtNum(totalLigaG,4)} g</td>
+          <td>—</td>
+          <td style="color:var(--gold-lt)">${fmtMoney(totalLigaCosto)}</td>
+        </tr>
+      </tbody>
+    </table>` : (ligaFilas ? `<hr class="sep"><p style="font-size:12px;color:var(--muted);margin:8px 0">${ligaFilas.includes('Sin color') ? '💎 Selecciona el color de liga en las tarjetas de kilataje para calcular el costo.' : ''}</p>` : '');
+
   const box = document.getElementById('c-preview');
   box.style.display = 'block';
   box.innerHTML = `
@@ -3043,6 +3427,7 @@ function calcularPreview() {
     </div>
     ${sobroRow}
     ${soportesRow}
+    ${ligaSection}
   `;
 }
 
@@ -3063,11 +3448,20 @@ async function completarTanda() {
     const malas  = parseInt(document.getElementById(`c-${k}k-malas`).value)  || 0;
     const peso   = parseFloat(document.getElementById(`c-${k}k-peso`).value) || 0;
     const fino   = peso * FACTOR[k];
-    produccion[k] = { piezas, piezas_malas: malas, peso_g: +peso.toFixed(4), oro_fino_g: +fino.toFixed(4) };
+    const color  = document.getElementById(`c-${k}k-color`)?.value || '';
+    const ligaG  = (peso > 0 && color) ? calcLigaGramos(peso, k) : 0;
+    const ligaCosto = (peso > 0 && color) ? calcCostoLiga(peso, k, color) : 0;
+    produccion[k] = {
+      piezas, piezas_malas: malas,
+      peso_g: +peso.toFixed(4), oro_fino_g: +fino.toFixed(4),
+      ...(color && { color, liga_g: +ligaG.toFixed(4), liga_costo: +ligaCosto.toFixed(2) }),
+    };
     totalSalida += peso;
     totalFino   += fino;
   });
 
+  const totalLigaG    = ['10','14','18'].reduce((s,k) => s + (produccion[k].liga_g    || 0), 0);
+  const totalLigaCosto= ['10','14','18'].reduce((s,k) => s + (produccion[k].liga_costo || 0), 0);
 
   const sobro_g         = +(parseFloat(document.getElementById('c-sobro-real')?.value) || 0).toFixed(4);
   const sop10 = parseFloat(document.getElementById('c-sop-10')?.value) || 0;
@@ -3096,6 +3490,10 @@ async function completarTanda() {
     rendimiento_pct:     finoEntrada > 0 ? +(totalFino / finoEntrada * 100).toFixed(2) : 0,
     dias_vaciado:        diasVac,
     fotos_vaciado:       _vacFotos.length > 0 ? _vacFotos.map(f => f.b64) : undefined,
+    ...(totalLigaG > 0 && {
+      liga_total_g:     +totalLigaG.toFixed(4),
+      liga_total_costo: +totalLigaCosto.toFixed(2),
+    }),
   };
 
   t.completada   = true;
@@ -3340,6 +3738,38 @@ function openDetalle(codigo) {
         <span class="value" style="color:var(--blue)">${t.fecha_vaciado} · ${Math.round((new Date()-new Date(t.fecha_vaciado))/86400000)} días</span>
       </div>` : ''}
       ${renderFotoGaleria(c.fotos_vaciado, '📸 Fotos del vaciado')}
+      ${(() => {
+        if (!c.liga_total_g) return '';
+        const COLOR_LBL = { amarillo:'🟡 Amarillo', blanco:'⚪ Blanco', rosa:'🌸 Rosa' };
+        const COLOR_CLS = { amarillo:'am', blanco:'bl', rosa:'ro' };
+        let filas = '';
+        ['10','14','18'].forEach(k => {
+          const kd = c.produccion[k];
+          if (kd?.liga_g > 0) {
+            const entry = getPrecioLigaEntry(kd.color, k);
+            filas += `<tr>
+              <td class="kl">${k}k</td>
+              <td><span class="cbadge cbadge-${COLOR_CLS[kd.color]||'am'}" style="font-size:11px;padding:2px 7px">${COLOR_LBL[kd.color]||kd.color}</span></td>
+              <td>${fmtNum(kd.liga_g,4)} g</td>
+              <td style="color:var(--muted);font-size:12px">${entry.nombre||'—'}</td>
+              <td style="color:var(--gold-lt)">${fmtMoney(kd.liga_costo||0)}</td>
+            </tr>`;
+          }
+        });
+        return `<hr class="sep"><h3>💎 Liga utilizada</h3>
+          <table class="prod-table">
+            <thead><tr><th>k</th><th>Color</th><th>Liga (g)</th><th>Aleación</th><th>Costo</th></tr></thead>
+            <tbody>
+              ${filas}
+              <tr style="font-weight:600">
+                <td colspan="2">TOTAL</td>
+                <td>${fmtNum(c.liga_total_g,4)} g</td>
+                <td>—</td>
+                <td style="color:var(--gold-lt)">${fmtMoney(c.liga_total_costo||0)}</td>
+              </tr>
+            </tbody>
+          </table>`;
+      })()}
     `;
     // Sobrante tracking: show where this tanda's leftover gold went
     if (c.sobro_g > 0.001) {
@@ -3720,7 +4150,50 @@ function calcImpKaratCera(k) {
 function calcImpKaratesAll() {
   const mat     = document.getElementById('imp-material')?.value || 'resina';
   const isAmbos = mat === 'ambos';
-  const costo   = parseFloat(document.getElementById('imp-costo')?.value) || 0;
+
+  // ── Auto-calcular costo de resina desde peso modelo ──────────────────────
+  if (!isAmbos && mat === 'resina') {
+    const costoEl = document.getElementById('imp-costo');
+    if (costoEl && !costoEl.dataset.manual) {
+      const totalPesoResina = ['10','14','18'].reduce((s,k) =>
+        s + (parseFloat(document.getElementById(`imp-${k}k-peso`)?.value) || 0), 0);
+      const pg = precioResinaG();
+      const hintEl = document.getElementById('imp-costo-hint');
+      if (totalPesoResina > 0 && pg > 0) {
+        const costoAuto = +(totalPesoResina * pg).toFixed(2);
+        costoEl.value = costoAuto.toFixed(2);
+        if (hintEl) {
+          hintEl.textContent = `Auto: ${fmtNum(totalPesoResina,4)} g × ${fmtMoney(pg)}/g = ${fmtMoney(costoAuto)}`;
+          hintEl.className = 'imp-costo-hint has-val';
+        }
+      } else if (hintEl) {
+        hintEl.textContent = pg > 0 ? 'Se calculará al ingresar el peso del modelo' : 'Configura el precio de resina en ⚙️ Precios';
+        hintEl.className = 'imp-costo-hint';
+      }
+    }
+  }
+  // Auto-calc resina en modo ambos
+  if (isAmbos) {
+    const costoResEl = document.getElementById('imp-costo-resina');
+    if (costoResEl && !costoResEl.dataset.manual) {
+      const totalPesoResina = ['10','14','18'].reduce((s,k) =>
+        s + (parseFloat(document.getElementById(`imp-${k}k-peso`)?.value) || 0), 0);
+      const pg = precioResinaG();
+      const hintEl = document.getElementById('imp-costo-resina-hint');
+      if (totalPesoResina > 0 && pg > 0) {
+        const costoAuto = +(totalPesoResina * pg).toFixed(2);
+        costoResEl.value = costoAuto.toFixed(2);
+        if (hintEl) {
+          hintEl.textContent = `Auto: ${fmtNum(totalPesoResina,4)} g × ${fmtMoney(pg)}/g = ${fmtMoney(costoAuto)}`;
+          hintEl.className = 'imp-costo-hint has-val';
+        }
+      } else if (hintEl) {
+        hintEl.textContent = '';
+      }
+    }
+  }
+
+  const costo = parseFloat(document.getElementById('imp-costo')?.value) || 0;
 
   let total = 0, buenas = 0, rotas = 0, totalEst = 0;
   let hayBuenas = false, hayRotas = false;
@@ -3900,12 +4373,14 @@ function guardarImpresion() {
     if (totalK > 0 || pesoK > 0 || (isAmbos && ceraDat?.total > 0)) {
       const matCalc = isAmbos ? 'resina' : material;
       const { mult } = getMultInfo(matCalc, k);
+      const colorVal = document.getElementById(`imp-${k}k-color`)?.value || '';
       const entry = {
         total:         totalK,
         buenas:        buenasK,
         rotas:         rotasK,
         peso_resina_g: pesoK || null,
         estimado_g:    pesoK > 0 ? +(pesoK * mult).toFixed(4) : null,
+        ...(colorVal && { color: colorVal }),
       };
       if (isAmbos) {
         entry.resina = resinaDat;
@@ -3996,6 +4471,15 @@ function limpiarImpresion() {
 
   ['imp-fecha','imp-nombre','imp-costo','imp-notas']
     .forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+  // Clear auto-fill flags
+  const costoEl = document.getElementById('imp-costo');
+  if (costoEl) { delete costoEl.dataset.manual; }
+  const costoResEl = document.getElementById('imp-costo-resina');
+  if (costoResEl) { delete costoResEl.dataset.manual; }
+  const hintEl = document.getElementById('imp-costo-hint');
+  if (hintEl) { hintEl.textContent = ''; hintEl.className = 'imp-costo-hint'; }
+  const hintResEl = document.getElementById('imp-costo-resina-hint');
+  if (hintResEl) { hintResEl.textContent = ''; }
   const matEl = document.getElementById('imp-material');
   if (matEl) matEl.value = 'resina';
   document.getElementById('imp-fecha').value = today();
@@ -4008,6 +4492,8 @@ function limpiarImpresion() {
       const elC = document.getElementById(`imp-c-${k}k-${f}`);
       if (elC) elC.value = '';
     });
+    const colorEl = document.getElementById(`imp-${k}k-color`);
+    if (colorEl) colorEl.value = '';
     const est = document.getElementById(`imp-${k}k-estimate`);
     if (est) est.innerHTML = '';
     const estC = document.getElementById(`imp-c-${k}k-estimate`);
@@ -4095,6 +4581,17 @@ function editarImpresion(id) {
       const estC = document.getElementById(`imp-c-${k}k-estimate`); if (estC) estC.innerHTML = '';
     }
   });
+
+  // Cargar colores por kilataje
+  ['10','14','18'].forEach(k => {
+    const colorEl = document.getElementById(`imp-${k}k-color`);
+    if (colorEl) colorEl.value = imp.kilates?.[k]?.color || '';
+  });
+  // Marcar costo como manual (el valor ya fue guardado por el usuario)
+  const impCostoEl = document.getElementById('imp-costo');
+  if (impCostoEl && imp.costo_total) impCostoEl.dataset.manual = '1';
+  const impCostoResEl = document.getElementById('imp-costo-resina');
+  if (impCostoResEl && imp.costo_resina) impCostoResEl.dataset.manual = '1';
 
   // Cargar fotos existentes
   _impFotos = (imp.fotos || []).map(b64 => ({ b64, name: '' }));
