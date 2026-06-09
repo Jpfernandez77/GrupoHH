@@ -391,25 +391,28 @@
   .foto-zone .fz-txt  { font-size:13px; color:var(--muted); }
   .foto-zone .fz-hint { font-size:11px; color:var(--muted); margin-top:3px; opacity:.7; }
 
-  .foto-thumb-grid { display:flex; flex-wrap:wrap; gap:10px; margin-top:12px; }
+  .foto-thumb-grid { display:flex; flex-wrap:wrap; gap:12px; margin-top:12px; }
   .foto-thumb-wrap {
-    position:relative; width:80px; height:80px; border-radius:6px;
+    position:relative; width:140px; height:140px; border-radius:8px;
     overflow:visible; flex-shrink:0;
   }
   .foto-thumb-wrap img {
-    width:80px; height:80px; object-fit:cover; border-radius:6px;
-    border:1px solid var(--border); cursor:pointer; transition:opacity .15s;
+    width:140px; height:140px; object-fit:cover; border-radius:8px;
+    border:2px solid var(--border); cursor:pointer;
+    transition:opacity .15s, transform .15s, border-color .15s;
     display:block;
   }
-  .foto-thumb-wrap img:hover { opacity:.85; }
+  .foto-thumb-wrap img:hover { opacity:.9; transform:scale(1.03); border-color:var(--gold-dk); }
   .foto-thumb-del {
-    position:absolute; top:-6px; right:-6px;
-    width:18px; height:18px; border-radius:50%;
-    background:var(--red); color:#fff; border:none; cursor:pointer;
-    font-size:10px; font-weight:700; line-height:18px; text-align:center;
+    position:absolute; top:-8px; right:-8px;
+    width:22px; height:22px; border-radius:50%;
+    background:var(--red); color:#fff; border:2px solid var(--bg); cursor:pointer;
+    font-size:11px; font-weight:700; line-height:18px; text-align:center;
     display:flex; align-items:center; justify-content:center;
-    box-shadow:0 1px 4px rgba(0,0,0,.5); z-index:2;
+    box-shadow:0 2px 6px rgba(0,0,0,.6); z-index:2;
+    transition:transform .1s;
   }
+  .foto-thumb-del:hover { transform:scale(1.15); }
   .foto-count { font-size:11px; color:var(--muted); margin-top:6px; }
 
   /* ── foto lightbox ── */
@@ -1600,7 +1603,7 @@ function renderFotoGaleria(fotos, label = '📷 Fotos') {
     <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px">${label}</div>
     <div style="display:flex;flex-wrap:wrap;gap:8px">
       ${srcs.map((s,i) => `<img src="${s}" onclick="openLightbox(${JSON.stringify(srcs)},${i})"
-        style="width:72px;height:72px;object-fit:cover;border-radius:6px;border:1px solid var(--border);cursor:pointer;transition:opacity .15s"
+        style="width:110px;height:110px;object-fit:cover;border-radius:8px;border:2px solid var(--border);cursor:pointer;transition:opacity .15s,transform .15s"
         onmouseover="this.style.opacity='.8'" onmouseout="this.style.opacity='1'" />`).join('')}
     </div>
   </div>`;
@@ -4709,7 +4712,7 @@ function renderImpresiones() {
             : '<span class="imp-sub" style="color:var(--muted);font-style:italic">Resultado pendiente</span>')}
         ${imp.notas ? `<span class="imp-sub" style="color:var(--muted);font-style:italic">${imp.notas}</span>` : ''}
         ${imp.fotos && imp.fotos.length > 0
-          ? `<div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap">${imp.fotos.map((s,i)=>`<img src="${s}" onclick="openLightbox(${JSON.stringify(imp.fotos)},${i});event.stopPropagation()" style="width:48px;height:48px;object-fit:cover;border-radius:5px;border:1px solid var(--border);cursor:pointer;transition:opacity .15s" onmouseover="this.style.opacity='.8'" onmouseout="this.style.opacity='1'" />`).join('')}</div>`
+          ? `<div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap">${imp.fotos.map((s,i)=>`<img src="${s}" onclick="openLightbox(${JSON.stringify(imp.fotos)},${i});event.stopPropagation()" style="width:68px;height:68px;object-fit:cover;border-radius:6px;border:1px solid var(--border);cursor:pointer;transition:opacity .15s,transform .12s" onmouseover="this.style.opacity='.8'" onmouseout="this.style.opacity='1'" />`).join('')}</div>`
           : ''}
       </div>
       <div class="imp-right">
