@@ -417,52 +417,45 @@
 
   /* ── foto lightbox ── */
   #foto-lightbox {
-    display:none; position:fixed; inset:0; background:rgba(0,0,0,.92);
-    z-index:500; flex-direction:column; align-items:stretch;
-    user-select:none; -webkit-user-select:none;
+    display:none; position:fixed; inset:0; background:rgba(0,0,0,.93);
+    z-index:500; flex-direction:column; align-items:center; justify-content:center;
+    user-select:none; -webkit-user-select:none; cursor:default;
   }
   #foto-lightbox.open { display:flex; }
-  #lb-img-wrap {
-    flex:1; display:flex; align-items:center; justify-content:center;
-    overflow:hidden; position:relative;
-  }
   #lb-img {
-    max-width:96vw; max-height:88vh; border-radius:8px; object-fit:contain;
-    transform-origin:center center; transform:translate(0px,0px) scale(1);
+    max-width:96vw; max-height:82vh; border-radius:8px; object-fit:contain;
+    transform-origin:center center;
     transition:transform .18s ease; display:block;
-    -webkit-user-drag:none; user-drag:none;
+    -webkit-user-drag:none; flex-shrink:0;
   }
-  #lb-img.lb-zoomed { cursor:grab; transition:none; }
-  #lb-img.lb-dragging { cursor:grabbing !important; }
+  #lb-img.lb-zoomed   { cursor:grab;     transition:none; }
+  #lb-img.lb-dragging { cursor:grabbing !important; transition:none; }
   #foto-lightbox .lb-close {
     position:absolute; top:14px; right:18px; z-index:10;
     color:#fff; background:rgba(255,255,255,.18); border:none; cursor:pointer;
-    font-size:22px; border-radius:50%; width:36px; height:36px;
+    font-size:22px; border-radius:50%; width:38px; height:38px;
     display:flex; align-items:center; justify-content:center;
     transition:background .15s;
   }
-  #foto-lightbox .lb-close:hover { background:rgba(255,255,255,.32); }
+  #foto-lightbox .lb-close:hover { background:rgba(255,255,255,.35); }
   #lb-toolbar {
     display:flex; align-items:center; justify-content:center;
-    gap:8px; padding:10px 16px; background:rgba(0,0,0,.5);
-    flex-shrink:0; flex-wrap:wrap;
+    gap:8px; padding:10px 16px; margin-top:12px;
+    background:rgba(0,0,0,.55); border-radius:10px; flex-wrap:wrap;
   }
   .lb-btn {
     background:rgba(255,255,255,.15); border:none; color:#fff; cursor:pointer;
     padding:6px 16px; border-radius:6px; font-size:14px; transition:background .15s;
   }
-  .lb-btn:hover { background:rgba(255,255,255,.28); }
+  .lb-btn:hover    { background:rgba(255,255,255,.28); }
   .lb-btn:disabled { opacity:.3; cursor:default; }
-  .lb-counter { color:rgba(255,255,255,.6); font-size:13px; }
-  .lb-sep { width:1px; height:22px; background:rgba(255,255,255,.2); margin:0 4px; }
-  .lb-zoom-btn {
-    background:rgba(255,255,255,.15); border:none; color:#fff; cursor:pointer;
-    padding:5px 12px; border-radius:6px; font-size:16px; transition:background .15s;
-  }
-  .lb-zoom-btn:hover  { background:rgba(255,255,255,.28); }
+  .lb-counter  { color:rgba(255,255,255,.65); font-size:13px; }
+  .lb-sep      { width:1px; height:22px; background:rgba(255,255,255,.25); margin:0 2px; }
+  .lb-zoom-btn { background:rgba(255,255,255,.15); border:none; color:#fff; cursor:pointer;
+    padding:5px 13px; border-radius:6px; font-size:16px; font-weight:700; transition:background .15s; }
+  .lb-zoom-btn:hover    { background:rgba(255,255,255,.28); }
   .lb-zoom-btn:disabled { opacity:.3; cursor:default; }
-  .lb-zoom-level { color:rgba(255,255,255,.75); font-size:13px; min-width:42px; text-align:center; font-weight:600; }
-  .lb-hint { font-size:11px; color:rgba(255,255,255,.45); position:absolute; bottom:8px; left:50%; transform:translateX(-50%); white-space:nowrap; pointer-events:none; transition:opacity 1s ease; }
+  .lb-zoom-level { color:rgba(255,255,255,.8); font-size:13px; min-width:44px; text-align:center; font-weight:600; }
 
   /* badge foto en listados */
   .foto-badge { font-size:11px; color:var(--muted); margin-left:6px; }
@@ -1068,7 +1061,7 @@
           <div class="field">
             <label>Costo total de impresión ($)</label>
             <input type="text" inputmode="decimal" id="imp-costo" placeholder="0.00"
-              oninput="document.getElementById('imp-costo').dataset.manual='1'; calcImpKaratesAll()"
+              oninput="calcImpKaratesAll()"
               onblur="evalGramInput(this)" />
             <div class="imp-costo-hint" id="imp-costo-hint"></div>
           </div>
@@ -1083,7 +1076,7 @@
                 Costo impresión ($)
               </label>
               <input type="text" inputmode="decimal" id="imp-costo-resina" placeholder="0.00"
-                oninput="document.getElementById('imp-costo-resina').dataset.manual='1'; calcImpCostoAmbos()"
+                oninput="calcImpCostoAmbos()"
                 onblur="evalGramInput(this)" />
               <div class="imp-costo-hint" id="imp-costo-resina-hint"></div>
             </div>
@@ -1470,13 +1463,10 @@
 <div id="toast"></div>
 
 <!-- ── FOTO LIGHTBOX ── -->
-<div id="foto-lightbox">
+<div id="foto-lightbox" onclick="if(event.target===this)closeLightbox()">
   <button class="lb-close" onclick="closeLightbox()" title="Cerrar (Esc)">✕</button>
-  <div id="lb-img-wrap" onclick="lbWrapClick(event)">
-    <img id="lb-img" src="" alt="foto" ondblclick="lbDblClick(event)" />
-    <div class="lb-hint" id="lb-hint">Doble clic · Rueda para zoom · Arrastra para mover</div>
-  </div>
-  <div id="lb-toolbar">
+  <img id="lb-img" src="" alt="foto" ondblclick="lbDblClick(event)" />
+  <div id="lb-toolbar" onclick="event.stopPropagation()">
     <button class="lb-btn" id="lb-prev" onclick="navLightbox(-1)">← Anterior</button>
     <span class="lb-counter" id="lb-counter">1 / 1</span>
     <button class="lb-btn" id="lb-next" onclick="navLightbox(1)">Siguiente →</button>
@@ -1613,21 +1603,18 @@ function openLightbox(srcs, idx = 0) {
   document.getElementById('foto-lightbox').classList.add('open');
   document.addEventListener('keydown', _lbKey);
   // Wheel zoom
-  document.getElementById('lb-img-wrap').addEventListener('wheel', _lbWheel, { passive:false });
+  document.getElementById('foto-lightbox').addEventListener('wheel', _lbWheel, { passive:false });
   // Drag to pan
   const img = document.getElementById('lb-img');
   img.addEventListener('mousedown', _lbMouseDown);
   document.addEventListener('mousemove', _lbMouseMove);
   document.addEventListener('mouseup',   _lbMouseUp);
-  // Hide hint after 3s
-  const hint = document.getElementById('lb-hint');
-  if (hint) { hint.style.opacity='1'; setTimeout(() => hint.style.opacity='0', 3000); }
 }
 function closeLightbox() {
   document.getElementById('foto-lightbox').classList.remove('open');
   document.removeEventListener('keydown', _lbKey);
-  const wrap = document.getElementById('lb-img-wrap');
-  if (wrap) wrap.removeEventListener('wheel', _lbWheel);
+  const lb = document.getElementById('foto-lightbox');
+  if (lb) lb.removeEventListener('wheel', _lbWheel);
   const img = document.getElementById('lb-img');
   if (img) img.removeEventListener('mousedown', _lbMouseDown);
   document.removeEventListener('mousemove', _lbMouseMove);
@@ -1638,9 +1625,6 @@ function navLightbox(dir) {
   _lbIdx = Math.max(0, Math.min(_lbSrcs.length - 1, _lbIdx + dir));
   lbZoomReset(false);
   _renderLb();
-}
-function lbWrapClick(e) {
-  if (e.target === document.getElementById('lb-img-wrap')) closeLightbox();
 }
 // Zoom functions
 function lbZoomIn()  { _setLbZoom(Math.min(6, _lbZoom + (_lbZoom < 2 ? 0.25 : 0.5))); }
@@ -4291,7 +4275,7 @@ function calcImpKaratesAll() {
   // ── Auto-calcular costo de resina desde peso modelo ──────────────────────
   if (!isAmbos && mat === 'resina') {
     const costoEl = document.getElementById('imp-costo');
-    if (costoEl && !costoEl.dataset.manual) {
+    if (costoEl) {
       const totalPesoResina = ['10','14','18'].reduce((s,k) =>
         s + (parseFloat(document.getElementById(`imp-${k}k-peso`)?.value) || 0), 0);
       const pg = precioResinaG();
@@ -4312,7 +4296,7 @@ function calcImpKaratesAll() {
   // Auto-calc resina en modo ambos
   if (isAmbos) {
     const costoResEl = document.getElementById('imp-costo-resina');
-    if (costoResEl && !costoResEl.dataset.manual) {
+    if (costoResEl) {
       const totalPesoResina = ['10','14','18'].reduce((s,k) =>
         s + (parseFloat(document.getElementById(`imp-${k}k-peso`)?.value) || 0), 0);
       const pg = precioResinaG();
@@ -4608,11 +4592,7 @@ function limpiarImpresion() {
 
   ['imp-fecha','imp-nombre','imp-costo','imp-notas']
     .forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
-  // Clear auto-fill flags
-  const costoEl = document.getElementById('imp-costo');
-  if (costoEl) { delete costoEl.dataset.manual; }
-  const costoResEl = document.getElementById('imp-costo-resina');
-  if (costoResEl) { delete costoResEl.dataset.manual; }
+  // Reset cost hints
   const hintEl = document.getElementById('imp-costo-hint');
   if (hintEl) { hintEl.textContent = ''; hintEl.className = 'imp-costo-hint'; }
   const hintResEl = document.getElementById('imp-costo-resina-hint');
@@ -4724,12 +4704,6 @@ function editarImpresion(id) {
     const colorEl = document.getElementById(`imp-${k}k-color`);
     if (colorEl) colorEl.value = imp.kilates?.[k]?.color || '';
   });
-  // Marcar costo como manual (el valor ya fue guardado por el usuario)
-  const impCostoEl = document.getElementById('imp-costo');
-  if (impCostoEl && imp.costo_total) impCostoEl.dataset.manual = '1';
-  const impCostoResEl = document.getElementById('imp-costo-resina');
-  if (impCostoResEl && imp.costo_resina) impCostoResEl.dataset.manual = '1';
-
   // Cargar fotos existentes
   _impFotos = (imp.fotos || []).map(b64 => ({ b64, name: '' }));
   renderFotoThumbs('imp');
