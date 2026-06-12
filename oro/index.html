@@ -3950,8 +3950,8 @@ function editarTanda(codigo) {
   document.getElementById('edit-modal-title').textContent = `Editar ${codigo}`;
   document.getElementById('e-codigo').value      = codigo;
   document.getElementById('e-fecha').value       = t.fecha;
-  document.getElementById('e-pedido').value      = t.oro_pedido_g;
-  document.getElementById('e-costo').value       = t.costo_total;
+  document.getElementById('e-pedido').value      = isNaN(t.oro_pedido_g) || t.oro_pedido_g == null ? '' : t.oro_pedido_g;
+  document.getElementById('e-costo').value       = isNaN(t.costo_total)  || t.costo_total  == null ? '' : t.costo_total;
   document.getElementById('e-reciclado').value   = t.oro_reciclado_g || 0;
   document.getElementById('e-kilate-recic').value = t.kilate_reciclado || '';
   document.getElementById('edit-error').style.display = 'none';
