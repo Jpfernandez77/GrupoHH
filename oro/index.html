@@ -3977,8 +3977,12 @@ async function guardarEdicion() {
 
   const errEl = document.getElementById('edit-error');
   errEl.style.display = 'none';
-  if (!fecha || !pedido || pedido <= 0 || !costo || costo <= 0) {
-    errEl.textContent = 'Fecha, gramos y costo son requeridos y deben ser mayores a 0.';
+  if (!fecha || !pedido || pedido <= 0) {
+    errEl.textContent = 'Fecha y gramos de oro son requeridos y deben ser mayores a 0.';
+    errEl.style.display = 'block'; return;
+  }
+  if (costo < 0) {
+    errEl.textContent = 'El costo no puede ser negativo.';
     errEl.style.display = 'block'; return;
   }
   if (recic > 0 && kilate <= 0) {
@@ -4429,10 +4433,8 @@ function guardarImpresion() {
 
   if (!fecha)               { errEl.textContent = 'Agrega la fecha.'; errEl.style.display='block'; return; }
   if (!nombre)              { errEl.textContent = 'Agrega un nombre o descripción.'; errEl.style.display='block'; return; }
-  if (!costo || costo <= 0) {
-    errEl.textContent = isAmbosForm
-      ? 'Ingresa el costo de al menos uno de los materiales (Resina o Cera).'
-      : 'Ingresa el costo total.';
+  if (costo < 0) {
+    errEl.textContent = 'El costo no puede ser negativo.';
     errEl.style.display = 'block'; return;
   }
 
